@@ -1,0 +1,293 @@
+"use client";
+
+import Link from "next/link";
+import {
+  useCallback,
+  useEffect,
+  useState,
+} from "react";
+import { useRouter } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
+
+const supabase = createClient();
+
+type EventRow = {
+  id: string;
+  title: string;
+  start_at: string | null;
+  location: string | null;
+  status: string;
+  capacity: number | null;
+  fee: number;
+};
+
+export default function AdminEventsPage() {
+  const router = useRouter();
+
+  const [events, setEvents] = useState<EventRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [message, setMessage] = useState("");
+
+  const loadEvents = useCallback(async () => {
+    setLoading(true);
+    setMessage("");
+
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser();
+
+    if (userError) {
+      console.error(
+        "ログイン情報取得エラー:",
+        userError
+      );
+
+      setMessage(
+        "ログイン情報を確認できませんでした。"
+      );
+
+      setLoading(false);
+      return;
+    }
+
+    if (!user) {
+      router.replace(
+        `/login?redirect=${encodeURIComponent(
+          "/admin/events"
+        )}`
+      );
+
+      return;
+    }
+
+    const { data, error } = await supabase
+      .from("events")
+      .select(`
+        id,
+        title,
+        start_at,
+        location,
+        status,
+        capacity,
+        fee
+      `)
+      .order("start_at", {
+        ascending: false,
+        nullsFirst: false,
+      });
+
+    if (error) {
+      console.error(
+        "イベント一覧取得エラー:",
+        error
+      );
+
+      setMessage(
+        `イベントを取得できませんでした：${error.message}`
+      );
+
+      setLoading(false);
+      return;
+    }
+
+    setEvents((data ?? []) as EventRow[]);
+    setLoading(false);
+  }, [router]);
+
+  useEffect(() => {
+    loadEvents();
+  }, [loadEvents]);
+
+  if (loading) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-neutral-100">
+        <p className="text-neutral-600">
+          イベントを読み込んでいます...
+        </p>
+      </main>
+    );
+  }
+
+  return (
+    <main className="min-h-screen bg-neutral-100 px-4 py-8 sm:px-6">
+      <div className="mx-auto max-w-5xl">
+        <div className="mb-6">
+          <Link
+            href="/admin"
+            className="text-sm font-bold text-neutral-600 underline underline-offset-4"
+          >
+            ← 管理画面へ戻る
+          </Link>
+        </div>
+
+        <header className="rounded-3xl bg-white p-6 shadow-sm sm:p-8">
+          <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-sm font-bold text-blue-600">
+                EVENT MANAGEMENT
+              </p>
+
+              <h1 className="mt-2 text-3xl font-bold text-neutral-900">
+                イベント管理
+              </h1>
+
+              <p className="mt-3 text-sm leading-6 text-neutral-500">
+                イベント情報の修正と、参加申請の回答確認ができます。
+              </p>
+            </div>
+
+            <Link
+              href="/admin/events/new"
+              className="shrink-0 rounded-xl bg-blue-600 px-5 py-3 text-center text-sm font-bold text-white transition hover:bg-blue-700"
+            >
+              ＋ イベントを作成
+            </Link>
+          </div>
+        </header>
+
+        {message && (
+          <p className="mt-6 rounded-2xl bg-red-50 px-5 py-4 text-sm text-red-700">
+            {message}
+          </p>
+        )}
+
+        {events.length === 0 ? (
+          <div className="mt-6 rounded-3xl bg-white p-10 text-center shadow-sm">
+            <p className="font-bold text-neutral-800">
+              イベントはまだありません
+            </p>
+
+            <p className="mt-2 text-sm text-neutral-500">
+              イベントを作成すると、ここに表示されます。
+            </p>
+          </div>
+        ) : (
+          <div className="mt-6 space-y-4">
+            {events.map((event) => (
+              <article
+                key={event.id}
+                className="rounded-3xl bg-white p-6 shadow-sm"
+              >
+                <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <EventStatusBadge
+                        status={event.status}
+                      />
+
+                      <span className="rounded-full bg-neutral-100 px-3 py-1 text-xs font-bold text-neutral-600">
+                        {formatFee(event.fee)}
+                      </span>
+                    </div>
+
+                    <h2 className="mt-4 text-xl font-bold text-neutral-900">
+                      {event.title}
+                    </h2>
+
+                    <div className="mt-3 space-y-1 text-sm text-neutral-500">
+                      <p>
+                        {formatDate(event.start_at)}
+                      </p>
+
+                      <p>
+                        {event.location || "会場未定"}
+                      </p>
+                    </div>
+                  </div>
+
+                  <Link
+                    href={`/admin/events/${event.id}`}
+                    className="shrink-0 rounded-xl border border-neutral-300 bg-white px-5 py-3 text-center text-sm font-bold text-neutral-800 transition hover:bg-neutral-50"
+                  >
+                    管理・回答を見る
+                  </Link>
+                </div>
+              </article>
+            ))}
+          </div>
+        )}
+      </div>
+    </main>
+  );
+}
+
+function EventStatusBadge({
+  status,
+}: {
+  status: string;
+}) {
+  const statusMap: Record<
+    string,
+    {
+      label: string;
+      className: string;
+    }
+  > = {
+    draft: {
+      label: "下書き",
+      className:
+        "bg-neutral-100 text-neutral-600",
+    },
+    published: {
+      label: "公開中",
+      className:
+        "bg-green-100 text-green-700",
+    },
+    closed: {
+      label: "受付終了",
+      className:
+        "bg-orange-100 text-orange-700",
+    },
+    cancelled: {
+      label: "中止",
+      className:
+        "bg-red-100 text-red-700",
+    },
+  };
+
+  const current =
+    statusMap[status] ?? {
+      label: status,
+      className:
+        "bg-neutral-100 text-neutral-600",
+    };
+
+  return (
+    <span
+      className={`rounded-full px-3 py-1 text-xs font-bold ${current.className}`}
+    >
+      {current.label}
+    </span>
+  );
+}
+
+function formatDate(
+  dateValue: string | null
+) {
+  if (!dateValue) {
+    return "日時未定";
+  }
+
+  return new Intl.DateTimeFormat(
+    "ja-JP",
+    {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+      weekday: "short",
+      hour: "2-digit",
+      minute: "2-digit",
+    }
+  ).format(new Date(dateValue));
+}
+
+function formatFee(fee: number) {
+  if (fee === 0) {
+    return "無料";
+  }
+
+  return `${fee.toLocaleString(
+    "ja-JP"
+  )}円`;
+}
