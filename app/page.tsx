@@ -1,65 +1,176 @@
-import Image from "next/image";
+"use client";
+
+import Link from "next/link";
+import { useEffect, useState } from "react";
+import { createClient } from "@/lib/supabase/client";
+
+type EventRow = {
+  id: string;
+  title: string;
+  description: string | null;
+  start_at: string | null;
+  location: string | null;
+  fee: number;
+  image_url: string | null;
+};
 
 export default function Home() {
+  const [events, setEvents] = useState<EventRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [errorMessage, setErrorMessage] = useState("");
+
+  useEffect(() => {
+    let active = true;
+
+    async function loadEvents() {
+      const supabase = createClient();
+      const { data, error } = await supabase
+        .from("events")
+        .select("id, title, description, start_at, location, fee, image_url")
+        .eq("status", "published")
+        .order("start_at", { ascending: true, nullsFirst: false });
+
+      if (!active) return;
+
+      if (error) {
+        console.error("イベント一覧取得エラー:", error);
+        setErrorMessage("イベントを読み込めませんでした。時間をおいて再度お試しください。");
+      } else {
+        setEvents((data ?? []) as EventRow[]);
+      }
+
+      setLoading(false);
+    }
+
+    loadEvents();
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
+    <main className="min-h-screen bg-neutral-100">
+      <header className="border-b border-neutral-200 bg-white">
+        <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-5 sm:px-6">
+          <Link href="/" className="text-lg font-black tracking-tight text-neutral-900">
+            TYPESTYLE EVENT
+          </Link>
+
+          <Link
+            href="/login"
+            className="rounded-xl bg-neutral-900 px-5 py-2.5 text-sm font-bold text-white transition hover:bg-neutral-700"
+          >
+            ログイン
+          </Link>
+        </div>
+      </header>
+
+      <section className="bg-neutral-900 px-4 py-16 text-white sm:px-6 sm:py-20">
+        <div className="mx-auto max-w-6xl">
+          <p className="text-sm font-bold tracking-widest text-blue-300">EVENTS</p>
+          <h1 className="mt-4 text-4xl font-black tracking-tight sm:text-5xl">
+            イベントを見つけよう
           </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
+          <p className="mt-5 max-w-2xl text-base leading-7 text-neutral-300">
+            開催予定のイベントをチェックして、気になるイベントに参加できます。
           </p>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+      </section>
+
+      <section className="mx-auto max-w-6xl px-4 py-12 sm:px-6 sm:py-16">
+        <div className="mb-7 flex items-end justify-between gap-4">
+          <div>
+            <p className="text-sm font-bold text-blue-600">UPCOMING</p>
+            <h2 className="mt-2 text-3xl font-black text-neutral-900">イベント一覧</h2>
+          </div>
+          {!loading && !errorMessage && (
+            <p className="text-sm text-neutral-500">{events.length}件</p>
+          )}
         </div>
-      </main>
-    </div>
+
+        {loading && (
+          <div className="rounded-3xl bg-white p-10 text-center text-neutral-500 shadow-sm">
+            イベントを読み込んでいます…
+          </div>
+        )}
+
+        {errorMessage && (
+          <div className="rounded-3xl bg-red-50 p-6 text-sm text-red-700">
+            {errorMessage}
+          </div>
+        )}
+
+        {!loading && !errorMessage && events.length === 0 && (
+          <div className="rounded-3xl bg-white p-10 text-center shadow-sm">
+            <p className="font-bold text-neutral-800">現在、公開中のイベントはありません。</p>
+            <p className="mt-2 text-sm text-neutral-500">新しいイベントの公開をお待ちください。</p>
+          </div>
+        )}
+
+        {!loading && !errorMessage && events.length > 0 && (
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            {events.map((event) => (
+              <article key={event.id} className="overflow-hidden rounded-3xl bg-white shadow-sm">
+                {event.image_url ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={event.image_url}
+                    alt=""
+                    className="aspect-[16/9] w-full object-cover"
+                  />
+                ) : (
+                  <div className="flex aspect-[16/9] items-center justify-center bg-gradient-to-br from-blue-100 to-indigo-100 text-sm font-bold text-blue-700">
+                    TYPESTYLE EVENT
+                  </div>
+                )}
+
+                <div className="p-6">
+                  <div className="flex flex-wrap gap-2 text-xs font-bold">
+                    <span className="rounded-full bg-blue-50 px-3 py-1 text-blue-700">
+                      {formatDate(event.start_at)}
+                    </span>
+                    <span className="rounded-full bg-neutral-100 px-3 py-1 text-neutral-600">
+                      {formatFee(event.fee)}
+                    </span>
+                  </div>
+
+                  <h3 className="mt-4 text-xl font-black text-neutral-900">{event.title}</h3>
+                  <p className="mt-2 text-sm text-neutral-500">{event.location || "会場未定"}</p>
+                  {event.description && (
+                    <p className="mt-4 line-clamp-2 text-sm leading-6 text-neutral-600">
+                      {event.description}
+                    </p>
+                  )}
+
+                  <Link
+                    href={`/events/${event.id}`}
+                    className="mt-6 block rounded-xl border border-neutral-300 px-4 py-3 text-center text-sm font-bold text-neutral-800 transition hover:bg-neutral-50"
+                  >
+                    詳細を見る
+                  </Link>
+                </div>
+              </article>
+            ))}
+          </div>
+        )}
+      </section>
+    </main>
   );
+}
+
+function formatDate(value: string | null) {
+  if (!value) return "日時未定";
+
+  return new Intl.DateTimeFormat("ja-JP", {
+    month: "long",
+    day: "numeric",
+    weekday: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(new Date(value));
+}
+
+function formatFee(fee: number) {
+  return fee === 0 ? "無料" : `${fee.toLocaleString("ja-JP")}円`;
 }
