@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import {
+  type ReactNode,
   useCallback,
   useEffect,
   useMemo,
@@ -41,6 +42,13 @@ type UserEventData = {
   status: string;
 };
 
+type PaymentData = {
+  id: string;
+  status: string;
+  method: string | null;
+  note: string | null;
+};
+
 type QuestionRow = {
   id: string;
   question_text: string;
@@ -70,6 +78,9 @@ export default function EventDetailPage() {
 
   const [userEvent, setUserEvent] =
     useState<UserEventData | null>(null);
+
+  const [payment, setPayment] =
+    useState<PaymentData | null>(null);
 
   const [isLoggedIn, setIsLoggedIn] =
     useState(false);
@@ -199,8 +210,24 @@ export default function EventDetailPage() {
         }
 
         setUserEvent(registrationData ?? null);
+
+        if (registrationData) {
+          const { data: paymentData, error: paymentError } = await supabase
+            .from("payments")
+            .select("id, status, method, note")
+            .eq("user_event_id", registrationData.id)
+            .maybeSingle();
+
+          if (paymentError) {
+            console.error("支払い情報取得エラー:", paymentError);
+          }
+          setPayment(paymentData ?? null);
+        } else {
+          setPayment(null);
+        }
       } else {
         setUserEvent(null);
+        setPayment(null);
       }
 
       const {
@@ -417,11 +444,34 @@ export default function EventDetailPage() {
     userEvent?.status ===
       "cancel_requested";
 
-  const canChoosePayment =
+  const canManagePayment =
     event !== null &&
-    event.fee > 0 &&
     (userEvent?.status === "reserved" ||
       userEvent?.status === "joined");
+
+  async function handlePaymentConfirmation() {
+    if (!payment || !event || event.fee <= 0 || payment.status !== "pending") return;
+
+    setProcessing(true);
+    setMessage("");
+    setIsError(false);
+
+    const { data, error } = await supabase
+      .from("payments")
+      .update({ status: "confirmation_requested", updated_at: new Date().toISOString() })
+      .eq("id", payment.id)
+      .select("id, status, method, note")
+      .single();
+
+    if (error) {
+      setIsError(true);
+      setMessage(`支払済み申請を送信できませんでした：${error.message}`);
+    } else {
+      setPayment(data as PaymentData);
+      setMessage("お支払い有難うございます。確認完了までお待ちください");
+    }
+    setProcessing(false);
+  }
 
   async function saveAnswers(
     userEventId: string
@@ -948,28 +998,55 @@ export default function EventDetailPage() {
 
                 <DetailRow
                   label="参加費"
-                  value={formatFee(
-                    event.fee
-                  )}
+                  value={
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span>{formatFee(event.fee)}</span>
+                      {isJoined && <PaymentStatusBadge fee={event.fee} status={payment?.status ?? null} />}
+                    </div>
+                  }
                 />
               </dl>
             </section>
           </div>
         </article>
 
-        {canChoosePayment && (
+        {canManagePayment && (
           <section className="mt-6 rounded-3xl bg-white p-6 shadow-sm sm:p-8">
             <p className="text-sm font-bold text-blue-600">PAYMENT</p>
             <h2 className="mt-2 text-xl font-bold text-neutral-900">参加費のお支払い</h2>
             <p className="mt-3 text-sm leading-6 text-neutral-600">
-              参加費は{formatFee(event.fee)}です。銀行振込または現金支払いを選択してください。
+              {event.fee === 0
+                ? "必要に応じて備考を登録できます。"
+                : `参加費は${formatFee(event.fee)}です。支払い方法を登録してください。`}
             </p>
             <Link
               href={`/events/${event.id}/payment`}
               className="mt-5 block rounded-xl bg-blue-600 px-5 py-4 text-center font-bold text-white transition hover:bg-blue-700"
             >
-              支払い方法を選ぶ
+              {event.fee === 0
+                ? payment ? "備考を変更" : "備考を登録"
+                : payment ? "支払方法変更" : "支払い方法を選ぶ"}
             </Link>
+            {event.fee > 0 && payment?.status === "pending" && (
+              <button
+                type="button"
+                onClick={handlePaymentConfirmation}
+                disabled={processing}
+                className="mt-3 w-full rounded-xl border border-blue-600 bg-white px-5 py-4 font-bold text-blue-700 disabled:opacity-50"
+              >
+                {processing ? "申請中…" : "支払済み申請"}
+              </button>
+            )}
+            {payment?.status === "confirmation_requested" && (
+              <p className="mt-4 rounded-xl bg-green-50 p-4 text-sm text-green-700">
+                お支払い有難うございます。確認完了までお待ちください
+              </p>
+            )}
+            {payment?.status === "paid" && (
+              <p className="mt-4 rounded-xl bg-green-50 p-4 text-sm text-green-700">
+                お支払いの確認が完了しています。
+              </p>
+            )}
           </section>
         )}
 
@@ -1058,7 +1135,7 @@ function DetailRow({
   value,
 }: {
   label: string;
-  value: string;
+  value: ReactNode;
 }) {
   return (
     <div className="grid gap-2 px-5 py-4 sm:grid-cols-[120px_1fr]">
@@ -1180,4 +1257,22 @@ function formatFee(fee: number) {
   return `${fee.toLocaleString(
     "ja-JP"
   )}円`;
+}
+
+function PaymentStatusBadge({ fee, status }: { fee: number; status: string | null }) {
+  const current = fee === 0
+    ? { label: "無料", className: "bg-neutral-100 text-neutral-700" }
+    : status === "paid"
+      ? { label: "支払済み", className: "bg-green-100 text-green-700" }
+      : status === "confirmation_requested"
+        ? { label: "確認待ち", className: "bg-blue-100 text-blue-700" }
+        : status === "pending"
+          ? { label: "支払い待ち", className: "bg-orange-100 text-orange-700" }
+          : { label: "未選択", className: "bg-neutral-100 text-neutral-600" };
+
+  return (
+    <span className={`rounded-full px-3 py-1 text-xs font-bold ${current.className}`}>
+      {current.label}
+    </span>
+  );
 }

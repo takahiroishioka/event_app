@@ -8,11 +8,12 @@ import { createClient } from "@/lib/supabase/client";
 
 const supabase = createClient();
 
-type PaymentMethod = "bank" | "cash";
+type PaymentMethod = "bank" | "cash" | "free";
 type PaymentRow = {
   id: string;
-  method: PaymentMethod;
-  status: "pending" | "paid" | "failed" | "cancelled" | "refunded";
+  method: PaymentMethod | null;
+  status: "pending" | "confirmation_requested" | "paid" | "failed" | "cancelled" | "refunded";
+  note: string | null;
 };
 
 export default function PaymentPage() {
@@ -24,6 +25,7 @@ export default function PaymentPage() {
   const [userEventId, setUserEventId] = useState("");
   const [payment, setPayment] = useState<PaymentRow | null>(null);
   const [method, setMethod] = useState<PaymentMethod | "">("");
+  const [note, setNote] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
@@ -41,7 +43,7 @@ export default function PaymentPage() {
       .select("id, title, fee")
       .eq("id", eventId)
       .maybeSingle();
-    if (eventError || !event || event.fee <= 0) {
+    if (eventError || !event) {
       setIsError(true);
       setMessage("支払い対象のイベントを確認できませんでした。");
       setLoading(false);
@@ -64,7 +66,7 @@ export default function PaymentPage() {
 
     const { data: savedPayment, error: paymentError } = await supabase
       .from("payments")
-      .select("id, method, status")
+      .select("id, method, status, note")
       .eq("user_event_id", registration.id)
       .maybeSingle();
 
@@ -77,7 +79,10 @@ export default function PaymentPage() {
     } else if (savedPayment) {
       const typedPayment = savedPayment as PaymentRow;
       setPayment(typedPayment);
-      setMethod(typedPayment.method);
+      setMethod(event.fee > 0 && event.fee < 1000 ? "cash" : typedPayment.method || "");
+      setNote(typedPayment.note || "");
+    } else if (event.fee > 0 && event.fee < 1000) {
+      setMethod("cash");
     }
     setLoading(false);
   }, [eventId, router]);
@@ -89,7 +94,9 @@ export default function PaymentPage() {
 
   async function savePayment(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!method || !userEventId || payment?.status === "paid") return;
+    const isFree = amount === 0;
+    const selectedMethod: PaymentMethod = isFree ? "free" : method as PaymentMethod;
+    if ((!isFree && !method) || !userEventId || payment?.status === "paid" || payment?.status === "confirmation_requested") return;
     setSaving(true);
     setMessage("");
     setIsError(false);
@@ -102,18 +109,19 @@ export default function PaymentPage() {
     const result = payment
       ? await supabase
           .from("payments")
-          .update({ method, updated_at: new Date().toISOString() })
+          .update({ method: selectedMethod, note: isFree ? note.trim() || null : null, updated_at: new Date().toISOString() })
           .eq("id", payment.id)
-          .select("id, method, status")
+          .select("id, method, status, note")
           .single()
       : await supabase
           .from("payments")
           .insert({
             user_event_id: userEventId,
             amount,
-            method,
+            method: selectedMethod,
+            note: isFree ? note.trim() || null : null,
           })
-          .select("id, method, status")
+          .select("id, method, status, note")
           .single();
 
     if (result.error) {
@@ -121,6 +129,11 @@ export default function PaymentPage() {
       setMessage(`支払い方法を保存できませんでした：${result.error.message}`);
     } else {
       setPayment(result.data as PaymentRow);
+      if (selectedMethod === "cash" || selectedMethod === "free") {
+        router.push(`/events/${eventId}`);
+        router.refresh();
+        return;
+      }
       setMessage("支払い方法を登録しました。");
     }
     setSaving(false);
@@ -134,7 +147,7 @@ export default function PaymentPage() {
           <Link href={`/events/${eventId}`} className="text-sm font-bold text-neutral-600 underline">← イベント詳細へ戻る</Link>
           <section className="mt-6 rounded-3xl bg-white p-6 shadow-sm sm:p-8">
             <p className="text-sm font-bold text-blue-600">PAYMENT</p>
-            <h1 className="mt-2 text-3xl font-bold text-neutral-900">支払い方法の選択</h1>
+            <h1 className="mt-2 text-3xl font-bold text-neutral-900">{amount === 0 && !loading ? "備考の登録" : "支払い方法の選択"}</h1>
 
             {loading ? (
               <p className="mt-6 text-neutral-500">読み込み中…</p>
@@ -145,24 +158,32 @@ export default function PaymentPage() {
                 <div className="rounded-2xl bg-neutral-50 p-5">
                   <p className="font-bold text-neutral-900">{eventTitle}</p>
                   <p className="mt-2 text-2xl font-black text-neutral-900">{amount.toLocaleString("ja-JP")}円</p>
-                  {payment && <p className="mt-2 text-sm text-neutral-500">状態：{payment.status === "paid" ? "支払済み" : "支払い待ち"}</p>}
+                  {payment && <p className="mt-2 text-sm text-neutral-500">状態：{payment.status === "paid" ? "支払済み" : payment.status === "confirmation_requested" ? "確認待ち" : "支払い待ち"}</p>}
                 </div>
 
-                <div className="mt-6 grid gap-4 sm:grid-cols-2">
-                  <label className={`cursor-pointer rounded-2xl border-2 p-5 ${method === "bank" ? "border-blue-600 bg-blue-50" : "border-neutral-200"}`}>
-                    <input type="radio" name="payment-method" value="bank" checked={method === "bank"} disabled={payment?.status === "paid"} onChange={() => setMethod("bank")} className="mr-2" />
-                    <span className="font-bold">銀行振込</span>
-                    <p className="mt-2 text-xs leading-5 text-neutral-500">指定口座へお振込みいただきます。</p>
+                {amount === 0 ? (
+                  <label className="mt-6 block text-sm font-bold">備考（任意）
+                    <textarea value={note} onChange={(event) => setNote(event.target.value)} rows={5} placeholder="主催者への連絡事項など" className="mt-2 w-full rounded-xl border border-neutral-300 p-4 font-normal" />
                   </label>
-                  <label className={`cursor-pointer rounded-2xl border-2 p-5 ${method === "cash" ? "border-blue-600 bg-blue-50" : "border-neutral-200"}`}>
-                    <input type="radio" name="payment-method" value="cash" checked={method === "cash"} disabled={payment?.status === "paid"} onChange={() => setMethod("cash")} className="mr-2" />
-                    <span className="font-bold">現金支払い</span>
-                    <p className="mt-2 text-xs leading-5 text-neutral-500">当日、会場で現金をお支払いいただきます。</p>
-                  </label>
-                </div>
+                ) : (
+                  <div className={`mt-6 grid gap-4 ${amount >= 1000 ? "sm:grid-cols-2" : ""}`}>
+                    {amount >= 1000 && (
+                      <label className={`cursor-pointer rounded-2xl border-2 p-5 ${method === "bank" ? "border-blue-600 bg-blue-50" : "border-neutral-200"}`}>
+                        <input type="radio" name="payment-method" value="bank" checked={method === "bank"} disabled={payment?.status === "paid" || payment?.status === "confirmation_requested"} onChange={() => setMethod("bank")} className="mr-2" />
+                        <span className="font-bold">銀行振込</span>
+                        <p className="mt-2 text-xs leading-5 text-neutral-500">指定口座へお振込みいただきます。</p>
+                      </label>
+                    )}
+                    <label className={`cursor-pointer rounded-2xl border-2 p-5 ${method === "cash" ? "border-blue-600 bg-blue-50" : "border-neutral-200"}`}>
+                      <input type="radio" name="payment-method" value="cash" checked={method === "cash"} disabled={payment?.status === "paid" || payment?.status === "confirmation_requested"} onChange={() => setMethod("cash")} className="mr-2" />
+                      <span className="font-bold">現金支払い</span>
+                      <p className="mt-2 text-xs leading-5 text-neutral-500">当日、会場で現金をお支払いいただきます。</p>
+                    </label>
+                  </div>
+                )}
 
-                <button type="submit" disabled={!method || saving || payment?.status === "paid"} className="mt-6 w-full rounded-xl bg-blue-600 px-5 py-4 font-bold text-white disabled:bg-neutral-400">
-                  {saving ? "保存中…" : payment ? "支払い方法を変更" : "支払い方法を登録"}
+                <button type="submit" disabled={(amount > 0 && !method) || saving || payment?.status === "paid" || payment?.status === "confirmation_requested"} className="mt-6 w-full rounded-xl bg-blue-600 px-5 py-4 font-bold text-white disabled:bg-neutral-400">
+                  {saving ? "保存中…" : amount === 0 ? "備考を保存" : payment ? "支払い方法を変更" : "支払い方法を登録"}
                 </button>
                 {message && <p className={`mt-4 rounded-xl p-4 text-sm ${isError ? "bg-red-50 text-red-700" : "bg-green-50 text-green-700"}`}>{message}</p>}
               </form>
