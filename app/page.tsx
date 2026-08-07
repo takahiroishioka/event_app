@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import ImageCarousel, { type CarouselImage } from "@/components/ImageCarousel";
 import SiteHeader from "@/components/SiteHeader";
+import BannerSection, { type Banner } from "@/components/BannerSection";
 
 type EventRow = {
   id: string;
@@ -32,6 +33,7 @@ export default function Home() {
   const [events, setEvents] = useState<EventRow[]>([]);
   const [topImages, setTopImages] = useState<CarouselImage[]>([]);
   const [settings, setSettings] = useState<TopPageSettings>(defaultSettings);
+  const [banners, setBanners] = useState<Banner[]>([]);
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
 
@@ -40,7 +42,7 @@ export default function Home() {
 
     async function loadEvents() {
       const supabase = createClient();
-      const [eventResult, imageResult, settingsResult] = await Promise.all([
+      const [eventResult, imageResult, settingsResult, bannerResult] = await Promise.all([
         supabase
           .from("events")
           .select("id, title, description, start_at, location, fee, image_url")
@@ -57,6 +59,12 @@ export default function Home() {
           .select("site_name, hero_title, hero_description")
           .eq("id", true)
           .maybeSingle(),
+        supabase
+          .from("banners")
+          .select("id, title, link_url")
+          .eq("placement", "top")
+          .eq("is_active", true)
+          .order("sort_order"),
       ]);
 
       if (!active) return;
@@ -74,6 +82,21 @@ export default function Home() {
 
       if (!settingsResult.error && settingsResult.data) {
         setSettings(settingsResult.data as TopPageSettings);
+      }
+
+      if (!bannerResult.error && bannerResult.data?.length) {
+        const bannerIds = bannerResult.data.map((banner) => banner.id);
+        const { data: bannerImages } = await supabase
+          .from("site_images")
+          .select("id, image_url, alt_text, banner_id")
+          .in("banner_id", bannerIds)
+          .eq("placement", "banner")
+          .eq("is_active", true)
+          .order("sort_order");
+        if (active) setBanners(bannerResult.data.map((banner) => ({
+          ...banner,
+          images: (bannerImages ?? []).filter((image) => image.banner_id === banner.id),
+        })) as Banner[]);
       }
 
       setLoading(false);
@@ -179,6 +202,7 @@ export default function Home() {
           </div>
         )}
       </section>
+      <BannerSection banners={banners} />
     </main>
   );
 }

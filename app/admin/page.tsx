@@ -274,6 +274,12 @@ export default function AdminPage() {
               description="サイト名、見出し、説明文、トップ画像のカルーセルを管理します。"
               actionLabel="トップページを管理"
             />
+            <AdminMenuCard
+              href="/admin/banners"
+              title="バナー管理"
+              description="TOPページとマイページ下部のリンク付きカルーセルバナーを管理します。"
+              actionLabel="バナーを管理"
+            />
           </div>
         </section>
 

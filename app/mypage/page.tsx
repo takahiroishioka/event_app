@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import type { User } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/client";
 import SiteHeader from "@/components/SiteHeader";
+import BannerSection, { type Banner } from "@/components/BannerSection";
 
 const supabase = createClient();
 
@@ -38,6 +39,7 @@ export default function MyPage() {
 
   const [joinedEvents, setJoinedEvents] = useState<EventData[]>([]);
   const [allEvents, setAllEvents] = useState<EventData[]>([]);
+  const [banners, setBanners] = useState<Banner[]>([]);
 
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
@@ -225,6 +227,32 @@ export default function MyPage() {
           (event) => !joinedEventIds.has(event.id)
         )
       );
+
+      const { data: bannerRows, error: bannerError } = await supabase
+        .from("banners")
+        .select("id, title, link_url")
+        .eq("placement", "mypage")
+        .eq("is_active", true)
+        .order("sort_order");
+
+      if (bannerError) {
+        console.error("バナー取得エラー:", bannerError);
+      } else if (bannerRows?.length) {
+        const { data: bannerImages, error: bannerImageError } = await supabase
+          .from("site_images")
+          .select("id, image_url, alt_text, banner_id")
+          .in("banner_id", bannerRows.map((banner) => banner.id))
+          .eq("placement", "banner")
+          .eq("is_active", true)
+          .order("sort_order");
+        if (bannerImageError) console.error("バナー画像取得エラー:", bannerImageError);
+        else setBanners(bannerRows.map((banner) => ({
+          ...banner,
+          images: (bannerImages ?? []).filter((image) => image.banner_id === banner.id),
+        })) as Banner[]);
+      } else {
+        setBanners([]);
+      }
       setLoading(false);
     }
 
@@ -360,6 +388,7 @@ export default function MyPage() {
         </section>
       </div>
     </main>
+    <BannerSection banners={banners} />
     </>
   );
 }

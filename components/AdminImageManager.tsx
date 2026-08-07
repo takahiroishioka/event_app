@@ -16,9 +16,11 @@ type SiteImage = {
 export default function AdminImageManager({
   placement,
   eventId = null,
+  bannerId = null,
 }: {
-  placement: "top" | "event";
+  placement: "top" | "event" | "banner";
   eventId?: string | null;
+  bannerId?: string | null;
 }) {
   const [images, setImages] = useState<SiteImage[]>([]);
   const [altText, setAltText] = useState("");
@@ -32,11 +34,13 @@ export default function AdminImageManager({
       .eq("placement", placement)
       .order("sort_order");
 
-    query = eventId ? query.eq("event_id", eventId) : query.is("event_id", null);
+    if (placement === "event") query = query.eq("event_id", eventId);
+    else if (placement === "banner") query = query.eq("banner_id", bannerId);
+    else query = query.is("event_id", null).is("banner_id", null);
     const { data, error } = await query;
     if (error) setMessage(`画像を取得できませんでした：${error.message}`);
     else setImages((data ?? []) as SiteImage[]);
-  }, [eventId, placement]);
+  }, [bannerId, eventId, placement]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => void loadImages(), 0);
@@ -55,7 +59,8 @@ export default function AdminImageManager({
     setSaving(true);
     setMessage("");
     const extension = file.name.split(".").pop()?.toLowerCase() || "jpg";
-    const path = `site-images/${placement}/${eventId ?? "top"}/${Date.now()}-${crypto.randomUUID()}.${extension}`;
+    const ownerId = eventId ?? bannerId ?? "top";
+    const path = `site-images/${placement}/${ownerId}/${Date.now()}-${crypto.randomUUID()}.${extension}`;
     const { error: uploadError } = await supabase.storage
       .from("event-images")
       .upload(path, file, { contentType: file.type, upsert: false });
@@ -72,6 +77,7 @@ export default function AdminImageManager({
       alt_text: altText.trim() || null,
       placement,
       event_id: eventId,
+      banner_id: bannerId,
       sort_order: images.length,
       is_active: true,
     });
