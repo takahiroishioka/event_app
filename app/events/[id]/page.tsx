@@ -19,6 +19,7 @@ import EventApplicationQuestions, {
   type QuestionType,
 } from "@/components/EventApplicationQuestions";
 import ImageCarousel, { type CarouselImage } from "@/components/ImageCarousel";
+import SiteHeader from "@/components/SiteHeader";
 
 const supabase = createClient();
 
@@ -856,6 +857,8 @@ export default function EventDetailPage() {
   }
 
   return (
+    <>
+    <SiteHeader />
     <main className="min-h-screen bg-neutral-100 px-4 py-8 sm:px-6">
       <div className="mx-auto max-w-4xl">
         <div className="mb-6">
@@ -1024,6 +1027,7 @@ export default function EventDetailPage() {
         )}
       </div>
     </main>
+    </>
   );
 }
 

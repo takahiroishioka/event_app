@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import ImageCarousel, { type CarouselImage } from "@/components/ImageCarousel";
+import SiteHeader from "@/components/SiteHeader";
 
 type EventRow = {
   id: string;
@@ -87,20 +88,7 @@ export default function Home() {
 
   return (
     <main className="min-h-screen bg-neutral-100">
-      <header className="border-b border-neutral-200 bg-white">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-5 sm:px-6">
-          <Link href="/" className="text-lg font-black tracking-tight text-neutral-900">
-            {settings.site_name}
-          </Link>
-
-          <Link
-            href="/login"
-            className="rounded-xl bg-neutral-900 px-5 py-2.5 text-sm font-bold text-white transition hover:bg-neutral-700"
-          >
-            ログイン
-          </Link>
-        </div>
-      </header>
+      <SiteHeader siteName={settings.site_name} />
 
       {topImages.length > 0 && (
         <ImageCarousel images={topImages} className="w-full" />

@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { User } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/client";
+import SiteHeader from "@/components/SiteHeader";
 
 const supabase = createClient();
 
@@ -222,13 +223,6 @@ export default function MyPage() {
     loadMyPage();
   }, [router]);
 
-  async function handleLogout() {
-    await supabase.auth.signOut();
-
-    router.replace("/login");
-    router.refresh();
-  }
-
   if (loading) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-neutral-100">
@@ -240,6 +234,8 @@ export default function MyPage() {
   }
 
   return (
+    <>
+    <SiteHeader />
     <main className="min-h-screen bg-neutral-100 px-4 py-8 sm:px-6">
       <div className="mx-auto max-w-6xl">
         <header className="mb-8 rounded-3xl bg-white p-6 shadow-sm sm:p-8">
@@ -270,13 +266,6 @@ export default function MyPage() {
                 </Link>
               )}
 
-              <button
-                type="button"
-                onClick={handleLogout}
-                className="rounded-xl bg-neutral-900 px-5 py-3 text-sm font-bold text-white transition hover:bg-neutral-700"
-              >
-                ログアウト
-              </button>
             </div>
           </div>
         </header>
@@ -363,6 +352,7 @@ export default function MyPage() {
         </section>
       </div>
     </main>
+    </>
   );
 }
 
