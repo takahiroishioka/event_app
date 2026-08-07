@@ -11,6 +11,7 @@ import {
 } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import AdminImageManager from "@/components/AdminImageManager";
 
 const supabase = createClient();
 
@@ -955,9 +956,12 @@ function sanitizeFileName(
         )}
 
         {activeTab === "edit" && (
+          <div className="mt-6 space-y-6">
+            <AdminImageManager placement="event" eventId={eventId} />
+
           <form
             onSubmit={handleSave}
-            className="mt-6 rounded-3xl bg-white p-6 shadow-sm sm:p-8"
+            className="rounded-3xl bg-white p-6 shadow-sm sm:p-8"
           >
             <div className="space-y-6">
               <FormField
@@ -982,7 +986,8 @@ function sanitizeFileName(
                 />
               </FormField>
 
-              <FormField label="イベント画像">
+              <div className="hidden">
+              <FormField label="旧イベント画像">
                 <div className="rounded-2xl border border-dashed border-neutral-300 bg-neutral-50 p-5">
                   <input
                     id="event-image"
@@ -1061,6 +1066,7 @@ function sanitizeFileName(
                   </div>
                 )}
               </FormField>
+              </div>
 
               <FormField label="説明">
                 <textarea
@@ -1231,6 +1237,7 @@ function sanitizeFileName(
                   : "変更を保存"}
             </button>
           </form>
+          </div>
         )}
 
         {activeTab ===

@@ -260,15 +260,15 @@ export default function AdminPage() {
 
         <section className="mt-8">
           <h2 className="px-1 text-lg font-bold text-neutral-900">
-            画像管理
+            トップページ
           </h2>
 
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
             <AdminMenuCard
-              href="/admin/images"
-              title="表示画像・カルーセル"
-              description="トップページと各イベントの16:9画像を追加し、表示順や公開状態を管理します。"
-              actionLabel="画像を管理"
+              href="/admin/top"
+              title="トップページ管理"
+              description="サイト名、見出し、説明文、トップ画像のカルーセルを管理します。"
+              actionLabel="トップページを管理"
             />
           </div>
         </section>

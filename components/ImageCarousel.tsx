@@ -16,16 +16,17 @@ export default function ImageCarousel({
   className?: string;
 }) {
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [autoPlayStopped, setAutoPlayStopped] = useState(false);
 
   useEffect(() => {
-    if (images.length < 2) return;
+    if (images.length < 2 || autoPlayStopped) return;
 
     const timer = window.setInterval(() => {
       setCurrentIndex((current) => (current + 1) % images.length);
-    }, 5000);
+    }, 3000);
 
     return () => window.clearInterval(timer);
-  }, [images.length]);
+  }, [autoPlayStopped, images.length]);
 
   if (images.length === 0) return null;
 
@@ -38,7 +39,10 @@ export default function ImageCarousel({
   };
 
   return (
-    <div className={`relative aspect-video overflow-hidden bg-neutral-200 ${className}`}>
+    <div
+      className={`relative aspect-video overflow-hidden bg-neutral-200 ${className}`}
+      onPointerDown={() => setAutoPlayStopped(true)}
+    >
       {images.map((image, index) => (
         // eslint-disable-next-line @next/next/no-img-element
         <img

@@ -15,9 +15,22 @@ type EventRow = {
   image_url: string | null;
 };
 
+type TopPageSettings = {
+  site_name: string;
+  hero_title: string;
+  hero_description: string;
+};
+
+const defaultSettings: TopPageSettings = {
+  site_name: "TYPESTYLE EVENT",
+  hero_title: "イベントを見つけよう",
+  hero_description: "開催予定のイベントをチェックして、気になるイベントに参加できます。",
+};
+
 export default function Home() {
   const [events, setEvents] = useState<EventRow[]>([]);
   const [topImages, setTopImages] = useState<CarouselImage[]>([]);
+  const [settings, setSettings] = useState<TopPageSettings>(defaultSettings);
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
 
@@ -26,7 +39,7 @@ export default function Home() {
 
     async function loadEvents() {
       const supabase = createClient();
-      const [eventResult, imageResult] = await Promise.all([
+      const [eventResult, imageResult, settingsResult] = await Promise.all([
         supabase
           .from("events")
           .select("id, title, description, start_at, location, fee, image_url")
@@ -38,6 +51,11 @@ export default function Home() {
           .eq("placement", "top")
           .eq("is_active", true)
           .order("sort_order"),
+        supabase
+          .from("top_page_settings")
+          .select("site_name, hero_title, hero_description")
+          .eq("id", true)
+          .maybeSingle(),
       ]);
 
       if (!active) return;
@@ -51,6 +69,10 @@ export default function Home() {
 
       if (!imageResult.error) {
         setTopImages((imageResult.data ?? []) as CarouselImage[]);
+      }
+
+      if (!settingsResult.error && settingsResult.data) {
+        setSettings(settingsResult.data as TopPageSettings);
       }
 
       setLoading(false);
@@ -68,7 +90,7 @@ export default function Home() {
       <header className="border-b border-neutral-200 bg-white">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-5 sm:px-6">
           <Link href="/" className="text-lg font-black tracking-tight text-neutral-900">
-            TYPESTYLE EVENT
+            {settings.site_name}
           </Link>
 
           <Link
@@ -81,19 +103,17 @@ export default function Home() {
       </header>
 
       {topImages.length > 0 && (
-        <div className="mx-auto max-w-6xl px-4 pt-8 sm:px-6">
-          <ImageCarousel images={topImages} className="rounded-3xl shadow-sm" />
-        </div>
+        <ImageCarousel images={topImages} className="w-full" />
       )}
 
-      <section className="bg-neutral-900 px-4 py-16 text-white sm:px-6 sm:py-20">
+      <section className="bg-white px-4 py-16 text-neutral-900 sm:px-6 sm:py-20">
         <div className="mx-auto max-w-6xl">
-          <p className="text-sm font-bold tracking-widest text-blue-300">EVENTS</p>
+          <p className="text-sm font-bold tracking-widest text-blue-600">EVENTS</p>
           <h1 className="mt-4 text-4xl font-black tracking-tight sm:text-5xl">
-            イベントを見つけよう
+            {settings.hero_title}
           </h1>
-          <p className="mt-5 max-w-2xl text-base leading-7 text-neutral-300">
-            開催予定のイベントをチェックして、気になるイベントに参加できます。
+          <p className="mt-5 max-w-2xl text-base leading-7 text-neutral-600">
+            {settings.hero_description}
           </p>
         </div>
       </section>
