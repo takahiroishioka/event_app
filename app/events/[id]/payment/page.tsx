@@ -40,10 +40,10 @@ export default function PaymentPage() {
 
     const { data: event, error: eventError } = await supabase
       .from("events")
-      .select("id, title, fee")
+      .select("id, title, fee, payment_management_required")
       .eq("id", eventId)
       .maybeSingle();
-    if (eventError || !event) {
+    if (eventError || !event || event.fee <= 0 || !event.payment_management_required) {
       setIsError(true);
       setMessage("支払い対象のイベントを確認できませんでした。");
       setLoading(false);

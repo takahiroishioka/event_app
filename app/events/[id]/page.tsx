@@ -34,6 +34,8 @@ type EventData = {
   location: string | null;
   capacity: number | null;
   fee: number;
+  payment_management_required: boolean;
+  payment_note: string | null;
   status: string;
 };
 
@@ -147,6 +149,8 @@ export default function EventDetailPage() {
           location,
           capacity,
           fee,
+          payment_management_required,
+          payment_note,
           status
         `)
         .eq("id", eventId)
@@ -446,6 +450,8 @@ export default function EventDetailPage() {
 
   const canManagePayment =
     event !== null &&
+    event.fee > 0 &&
+    event.payment_management_required &&
     (userEvent?.status === "reserved" ||
       userEvent?.status === "joined");
 
@@ -1001,10 +1007,13 @@ export default function EventDetailPage() {
                   value={
                     <div className="flex flex-wrap items-center gap-2">
                       <span>{formatFee(event.fee)}</span>
-                      {isJoined && <PaymentStatusBadge fee={event.fee} status={payment?.status ?? null} />}
+                      {isJoined && event.payment_management_required && event.fee > 0 && <PaymentStatusBadge fee={event.fee} status={payment?.status ?? null} />}
                     </div>
                   }
                 />
+                {event.payment_note && (
+                  <DetailRow label="参加費の備考" value={event.payment_note} />
+                )}
               </dl>
             </section>
           </div>
@@ -1015,18 +1024,14 @@ export default function EventDetailPage() {
             <p className="text-sm font-bold text-blue-600">PAYMENT</p>
             <h2 className="mt-2 text-xl font-bold text-neutral-900">参加費のお支払い</h2>
             <p className="mt-3 text-sm leading-6 text-neutral-600">
-              {event.fee === 0
-                ? "必要に応じて備考を登録できます。"
-                : `参加費は${formatFee(event.fee)}です。支払い方法を登録してください。`}
+              参加費は{formatFee(event.fee)}です。支払い方法を登録してください。
             </p>
             {payment?.status !== "confirmation_requested" && payment?.status !== "paid" && (
               <Link
                 href={`/events/${event.id}/payment`}
                 className="mt-5 block rounded-xl bg-blue-600 px-5 py-4 text-center font-bold text-white transition hover:bg-blue-700"
               >
-                {event.fee === 0
-                  ? payment ? "備考を変更" : "備考を登録"
-                  : payment ? "支払方法変更" : "支払い方法を選ぶ"}
+                {payment ? "支払方法変更" : "支払い方法を選ぶ"}
               </Link>
             )}
             {event.fee > 0 && payment?.status === "pending" && (

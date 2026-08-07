@@ -59,6 +59,8 @@ export default function NewEventPage() {
   const [location, setLocation] = useState("");
   const [capacity, setCapacity] = useState("");
   const [fee, setFee] = useState("0");
+  const [paymentManagementRequired, setPaymentManagementRequired] = useState(false);
+  const [paymentNote, setPaymentNote] = useState("");
 
   const [status, setStatus] =
     useState<EventStatus>("draft");
@@ -433,6 +435,8 @@ export default function NewEventPage() {
 
           capacity: capacityNumber,
           fee: feeNumber,
+          payment_management_required: paymentManagementRequired,
+          payment_note: paymentNote.trim() || null,
           status,
         })
         .select("id")
@@ -771,6 +775,16 @@ export default function NewEventPage() {
                       円
                     </span>
                   </div>
+                </FormField>
+              </div>
+
+              <div className="rounded-2xl border border-neutral-200 p-5">
+                <label className="flex items-center gap-3 text-sm font-bold">
+                  <input type="checkbox" checked={paymentManagementRequired} onChange={(event) => setPaymentManagementRequired(event.target.checked)} disabled={saving} />
+                  支払管理を行う
+                </label>
+                <FormField label="参加費の備考">
+                  <textarea value={paymentNote} onChange={(event) => setPaymentNote(event.target.value)} placeholder="例：ご自分の飲食代のみ／会場費は割り勘" rows={3} disabled={saving} className={inputClass} />
                 </FormField>
               </div>
 

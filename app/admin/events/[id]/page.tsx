@@ -33,6 +33,8 @@ type EventData = {
   location: string | null;
   capacity: number | null;
   fee: number;
+  payment_management_required: boolean;
+  payment_note: string | null;
   status: EventStatus;
 };
 
@@ -102,6 +104,8 @@ export default function AdminEventDetailPage() {
   const [capacity, setCapacity] =
     useState("");
   const [fee, setFee] = useState("0");
+  const [paymentManagementRequired, setPaymentManagementRequired] = useState(false);
+  const [paymentNote, setPaymentNote] = useState("");
 
   const [status, setStatus] =
     useState<EventStatus>("draft");
@@ -172,6 +176,8 @@ export default function AdminEventDetailPage() {
         location,
         capacity,
         fee,
+        payment_management_required,
+        payment_note,
         status
       `)
       .eq("id", eventId)
@@ -235,6 +241,8 @@ export default function AdminEventDetailPage() {
     setFee(
       String(typedEvent.fee)
     );
+    setPaymentManagementRequired(typedEvent.payment_management_required);
+    setPaymentNote(typedEvent.payment_note ?? "");
     setStatus(typedEvent.status);
 
     /*
@@ -442,7 +450,8 @@ export default function AdminEventDetailPage() {
   }, [eventId, router]);
 
   useEffect(() => {
-    loadPage();
+    const timer = window.setTimeout(() => void loadPage(), 0);
+    return () => window.clearTimeout(timer);
   }, [loadPage]);
 
 function handleExportCsv() {
@@ -797,6 +806,8 @@ function sanitizeFileName(
           capacityNumber,
 
         fee: feeNumber,
+        payment_management_required: paymentManagementRequired,
+        payment_note: paymentNote.trim() || null,
         status,
       })
       .eq("id", eventId)
@@ -810,6 +821,8 @@ function sanitizeFileName(
         location,
         capacity,
         fee,
+        payment_management_required,
+        payment_note,
         status
       `)
       .single();
@@ -1185,6 +1198,16 @@ function sanitizeFileName(
                       inputClass
                     }
                   />
+                </FormField>
+              </div>
+
+              <div className="rounded-2xl border border-neutral-200 p-5">
+                <label className="flex items-center gap-3 text-sm font-bold">
+                  <input type="checkbox" checked={paymentManagementRequired} onChange={(inputEvent) => setPaymentManagementRequired(inputEvent.target.checked)} disabled={saving} />
+                  支払管理を行う
+                </label>
+                <FormField label="参加費の備考">
+                  <textarea value={paymentNote} onChange={(inputEvent) => setPaymentNote(inputEvent.target.value)} placeholder="例：ご自分の飲食代のみ／会場費は割り勘" rows={3} disabled={saving} className={inputClass} />
                 </FormField>
               </div>
 
