@@ -11,6 +11,7 @@ type SiteImage = {
   alt_text: string | null;
   sort_order: number;
   is_active: boolean;
+  link_url: string | null;
 };
 
 export default function AdminImageManager({
@@ -30,7 +31,7 @@ export default function AdminImageManager({
   const loadImages = useCallback(async () => {
     let query = supabase
       .from("site_images")
-      .select("id, image_url, alt_text, sort_order, is_active")
+      .select("id, image_url, alt_text, sort_order, is_active, link_url")
       .eq("placement", placement)
       .order("sort_order");
 
@@ -80,6 +81,7 @@ export default function AdminImageManager({
       banner_id: bannerId,
       sort_order: images.length,
       is_active: true,
+      link_url: null,
     });
 
     setMessage(error ? `画像を登録できませんでした：${error.message}` : "画像を登録しました。");
@@ -134,6 +136,19 @@ export default function AdminImageManager({
                   <input type="number" value={image.sort_order} disabled={saving} onChange={(event) => updateImage(image.id, { sort_order: Number(event.target.value) })} className="ml-2 w-16 rounded-lg border p-2" />
                 </label>
               </div>
+              {placement === "top" && (
+                <label className="mt-4 block text-sm font-bold">リンク先（任意）
+                  <input
+                    type="url"
+                    value={image.link_url ?? ""}
+                    disabled={saving}
+                    placeholder="https://..."
+                    onChange={(event) => setImages((current) => current.map((row) => row.id === image.id ? { ...row, link_url: event.target.value } : row))}
+                    onBlur={(event) => void updateImage(image.id, { link_url: event.target.value.trim() || null })}
+                    className="mt-2 w-full rounded-lg border border-neutral-300 px-3 py-2 font-normal text-neutral-900"
+                  />
+                </label>
+              )}
               <button type="button" disabled={saving} onClick={() => deleteImage(image.id)} className="mt-4 text-sm font-bold text-red-600 underline">削除</button>
             </div>
           </article>

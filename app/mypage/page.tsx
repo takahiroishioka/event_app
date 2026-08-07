@@ -7,8 +7,16 @@ import type { User } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/client";
 import SiteHeader from "@/components/SiteHeader";
 import BannerSection, { type Banner } from "@/components/BannerSection";
+import SocialFooter from "@/components/SocialFooter";
 
 const supabase = createClient();
+
+const defaultFooterSettings = {
+  brand_name: "shiokan",
+  instagram_url: null,
+  x_url: null,
+  youtube_url: null,
+};
 
 type EventData = {
   id: string;
@@ -42,6 +50,7 @@ export default function MyPage() {
   const [pastEvents, setPastEvents] = useState<EventData[]>([]);
   const [showPastEvents, setShowPastEvents] = useState(false);
   const [banners, setBanners] = useState<Banner[]>([]);
+  const [footerSettings, setFooterSettings] = useState(defaultFooterSettings);
 
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
@@ -261,6 +270,14 @@ export default function MyPage() {
       } else {
         setBanners([]);
       }
+
+      const { data: footerData, error: footerError } = await supabase
+        .from("footer_settings")
+        .select("brand_name, instagram_url, x_url, youtube_url")
+        .eq("id", true)
+        .maybeSingle();
+      if (footerError) console.error("フッター設定取得エラー:", footerError);
+      else if (footerData) setFooterSettings(footerData);
       setLoading(false);
     }
 
@@ -414,6 +431,9 @@ export default function MyPage() {
             )}
           </section>
         )}
+      </div>
+      <div className="mt-10">
+        <SocialFooter settings={footerSettings} />
       </div>
       <div className="mt-10">
         <BannerSection banners={banners} />

@@ -7,6 +7,7 @@ export type CarouselImage = {
   id: string;
   image_url: string;
   alt_text?: string | null;
+  link_url?: string | null;
 };
 
 export default function ImageCarousel({
@@ -52,8 +53,9 @@ export default function ImageCarousel({
           <img src={image.image_url} alt={image.alt_text || ""} className="h-full w-full object-cover" />
         );
         const imageClass = `absolute inset-0 transition-opacity duration-500 ${index === visibleIndex ? "opacity-100" : "pointer-events-none opacity-0"}`;
-        return href ? (
-          <Link key={image.id} href={href} className={imageClass}>{imageElement}</Link>
+        const imageHref = image.link_url || href;
+        return imageHref ? (
+          <Link key={image.id} href={imageHref} className={imageClass}>{imageElement}</Link>
         ) : (
           <div key={image.id} className={imageClass}>{imageElement}</div>
         );

@@ -59,7 +59,7 @@ export default function Home() {
           .order("start_at", { ascending: true, nullsFirst: false }),
         supabase
           .from("site_images")
-          .select("id, image_url, alt_text")
+          .select("id, image_url, alt_text, link_url")
           .eq("placement", "top")
           .eq("is_active", true)
           .order("sort_order"),
