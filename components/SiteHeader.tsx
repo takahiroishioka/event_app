@@ -9,6 +9,7 @@ export default function SiteHeader({ siteName = "TYPESTYLE EVENT" }: { siteName?
   const router = useRouter();
   const menuRef = useRef<HTMLDivElement>(null);
   const [isLoggedIn, setIsLoggedIn] = useState<boolean | null>(null);
+  const [savedSiteName, setSavedSiteName] = useState<string | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
 
@@ -19,6 +20,15 @@ export default function SiteHeader({ siteName = "TYPESTYLE EVENT" }: { siteName?
     void supabase.auth.getSession().then(({ data }) => {
       if (active) setIsLoggedIn(Boolean(data.session));
     });
+
+    void supabase
+      .from("top_page_settings")
+      .select("site_name")
+      .eq("id", true)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (active && data?.site_name) setSavedSiteName(data.site_name);
+      });
 
     const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
       if (active) setIsLoggedIn(Boolean(session));
@@ -61,7 +71,7 @@ export default function SiteHeader({ siteName = "TYPESTYLE EVENT" }: { siteName?
     <header className="relative z-50 border-b border-neutral-200 bg-white">
       <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-5 sm:px-6">
         <Link href="/" className="text-lg font-black tracking-tight text-neutral-900">
-          {siteName}
+          {savedSiteName ?? siteName}
         </Link>
 
         {isLoggedIn === false && (
