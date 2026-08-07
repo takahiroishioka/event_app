@@ -118,13 +118,6 @@ export default function EventDetailPage() {
           "ログイン情報取得エラー:",
           userError
         );
-
-        setIsError(true);
-        setMessage(
-          "ログイン情報を確認できませんでした。通信状態を確認して再読み込みしてください。"
-        );
-        setLoading(false);
-        return;
       }
 
       const {
