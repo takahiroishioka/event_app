@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import ImageCarousel, { type CarouselImage } from "@/components/ImageCarousel";
 
 type EventRow = {
   id: string;
@@ -16,6 +17,7 @@ type EventRow = {
 
 export default function Home() {
   const [events, setEvents] = useState<EventRow[]>([]);
+  const [topImages, setTopImages] = useState<CarouselImage[]>([]);
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
 
@@ -24,19 +26,31 @@ export default function Home() {
 
     async function loadEvents() {
       const supabase = createClient();
-      const { data, error } = await supabase
-        .from("events")
-        .select("id, title, description, start_at, location, fee, image_url")
-        .eq("status", "published")
-        .order("start_at", { ascending: true, nullsFirst: false });
+      const [eventResult, imageResult] = await Promise.all([
+        supabase
+          .from("events")
+          .select("id, title, description, start_at, location, fee, image_url")
+          .eq("status", "published")
+          .order("start_at", { ascending: true, nullsFirst: false }),
+        supabase
+          .from("site_images")
+          .select("id, image_url, alt_text")
+          .eq("placement", "top")
+          .eq("is_active", true)
+          .order("sort_order"),
+      ]);
 
       if (!active) return;
 
-      if (error) {
-        console.error("イベント一覧取得エラー:", error);
+      if (eventResult.error) {
+        console.error("イベント一覧取得エラー:", eventResult.error);
         setErrorMessage("イベントを読み込めませんでした。時間をおいて再度お試しください。");
       } else {
-        setEvents((data ?? []) as EventRow[]);
+        setEvents((eventResult.data ?? []) as EventRow[]);
+      }
+
+      if (!imageResult.error) {
+        setTopImages((imageResult.data ?? []) as CarouselImage[]);
       }
 
       setLoading(false);
@@ -65,6 +79,12 @@ export default function Home() {
           </Link>
         </div>
       </header>
+
+      {topImages.length > 0 && (
+        <div className="mx-auto max-w-6xl px-4 pt-8 sm:px-6">
+          <ImageCarousel images={topImages} className="rounded-3xl shadow-sm" />
+        </div>
+      )}
 
       <section className="bg-neutral-900 px-4 py-16 text-white sm:px-6 sm:py-20">
         <div className="mx-auto max-w-6xl">

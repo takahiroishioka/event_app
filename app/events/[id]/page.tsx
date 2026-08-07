@@ -18,6 +18,7 @@ import EventApplicationQuestions, {
   type QuestionOption,
   type QuestionType,
 } from "@/components/EventApplicationQuestions";
+import ImageCarousel, { type CarouselImage } from "@/components/ImageCarousel";
 
 const supabase = createClient();
 
@@ -62,6 +63,9 @@ export default function EventDetailPage() {
 
   const [event, setEvent] =
     useState<EventData | null>(null);
+
+  const [eventImages, setEventImages] =
+    useState<CarouselImage[]>([]);
 
   const [userEvent, setUserEvent] =
     useState<UserEventData | null>(null);
@@ -171,6 +175,20 @@ export default function EventDetailPage() {
       }
 
       setEvent(eventData);
+
+      const { data: imageData, error: imageError } = await supabase
+        .from("site_images")
+        .select("id, image_url, alt_text")
+        .eq("placement", "event")
+        .eq("event_id", eventId)
+        .eq("is_active", true)
+        .order("sort_order");
+
+      if (imageError) {
+        console.error("イベント画像取得エラー:", imageError);
+      } else {
+        setEventImages((imageData ?? []) as CarouselImage[]);
+      }
 
       const {
         data: registrationData,
@@ -853,15 +871,14 @@ export default function EventDetailPage() {
         </div>
 
         <article className="overflow-hidden rounded-3xl bg-white shadow-sm">
-          {event.image_url && (
-            <div className="aspect-[16/7] w-full overflow-hidden bg-neutral-200">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={event.image_url}
-                alt={event.title}
-                className="h-full w-full object-cover"
-              />
-            </div>
+          {(eventImages.length > 0 || event.image_url) && (
+            <ImageCarousel
+              images={
+                eventImages.length > 0
+                  ? eventImages
+                  : [{ id: "legacy", image_url: event.image_url!, alt_text: event.title }]
+              }
+            />
           )}
 
           <div className="border-b border-neutral-100 p-6 sm:p-10">
