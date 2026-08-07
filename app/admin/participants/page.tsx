@@ -9,14 +9,17 @@ const supabase = createClient();
 
 type Registration = { id: string; user_id: string; event_id: string; status: string; created_at: string };
 type UserRow = { id: string; name: string; email: string | null };
-type EventRow = { id: string; title: string; fee: number };
+type EventRow = { id: string; title: string; fee: number; start_at: string | null };
 type PaymentRow = { user_event_id: string; amount: number; status: string; method: string | null };
-type ParticipantRow = Registration & { userName: string; eventTitle: string; eventFee: number; payment: PaymentRow | null };
+type ParticipantRow = Registration & { userName: string; eventTitle: string; eventFee: number; eventStartAt: string | null; payment: PaymentRow | null };
 
 export default function AdminParticipantsPage() {
   const router = useRouter();
   const [participants, setParticipants] = useState<ParticipantRow[]>([]);
   const [search, setSearch] = useState("");
+  const [paymentFilter, setPaymentFilter] = useState<"unpaid" | "all">("unpaid");
+  const [eventFilter, setEventFilter] = useState("");
+  const [sortBy, setSortBy] = useState<"event_date" | "user">("event_date");
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
 
@@ -52,7 +55,7 @@ export default function AdminParticipantsPage() {
     const registrationIds = registrations.map((row) => row.id);
     const [usersResult, eventsResult, paymentsResult] = await Promise.all([
       userIds.length ? supabase.from("users").select("id, name, email").in("id", userIds) : Promise.resolve({ data: [], error: null }),
-      eventIds.length ? supabase.from("events").select("id, title, fee").in("id", eventIds) : Promise.resolve({ data: [], error: null }),
+      eventIds.length ? supabase.from("events").select("id, title, fee, start_at").in("id", eventIds) : Promise.resolve({ data: [], error: null }),
       registrationIds.length ? supabase.from("payments").select("user_event_id, amount, status, method").in("user_event_id", registrationIds) : Promise.resolve({ data: [], error: null }),
     ]);
     if (usersResult.error || eventsResult.error || paymentsResult.error) {
@@ -69,6 +72,7 @@ export default function AdminParticipantsPage() {
       userName: users.get(registration.user_id)?.name || "名前未登録",
       eventTitle: events.get(registration.event_id)?.title || "イベント不明",
       eventFee: events.get(registration.event_id)?.fee ?? 0,
+      eventStartAt: events.get(registration.event_id)?.start_at ?? null,
       payment: payments.get(registration.id) ?? null,
     })));
     setLoading(false);
@@ -79,12 +83,28 @@ export default function AdminParticipantsPage() {
     return () => window.clearTimeout(timer);
   }, [loadPage]);
 
+  const incompleteEvents = useMemo(() => {
+    const eventMap = new Map<string, { id: string; title: string; startAt: string | null }>();
+    participants.filter(isOutstandingPayment).forEach((row) => {
+      eventMap.set(row.event_id, { id: row.event_id, title: row.eventTitle, startAt: row.eventStartAt });
+    });
+    return [...eventMap.values()].sort((a, b) => dateValue(a.startAt) - dateValue(b.startAt));
+  }, [participants]);
+
   const visibleParticipants = useMemo(() => {
     const keyword = search.trim().toLowerCase();
-    return keyword
-      ? participants.filter((row) => `${row.userName} ${row.eventTitle}`.toLowerCase().includes(keyword))
-      : participants;
-  }, [participants, search]);
+    const filtered = participants.filter((row) => {
+      if (paymentFilter === "unpaid" && !isOutstandingPayment(row)) return false;
+      if (eventFilter && row.event_id !== eventFilter) return false;
+      return !keyword || `${row.userName} ${row.eventTitle}`.toLowerCase().includes(keyword);
+    });
+
+    return filtered.sort((a, b) =>
+      sortBy === "user"
+        ? a.userName.localeCompare(b.userName, "ja")
+        : dateValue(a.eventStartAt) - dateValue(b.eventStartAt)
+    );
+  }, [eventFilter, participants, paymentFilter, search, sortBy]);
 
   return (
     <main className="min-h-screen bg-neutral-100 px-4 py-8 sm:px-6">
@@ -94,7 +114,29 @@ export default function AdminParticipantsPage() {
           <p className="text-sm font-bold text-blue-600">PARTICIPANTS</p>
           <h1 className="mt-2 text-3xl font-bold text-neutral-900">参加者一覧</h1>
           <p className="mt-3 text-sm text-neutral-500">イベントをまたいで参加者と支払い状況を確認できます。</p>
-          <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="参加者名・イベント名で検索" className="mt-5 w-full rounded-xl border border-neutral-300 px-4 py-3 sm:max-w-md" />
+          <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <label className="text-xs font-bold text-neutral-600">支払いフィルター
+              <select value={paymentFilter} onChange={(event) => setPaymentFilter(event.target.value as "unpaid" | "all")} className="mt-2 w-full rounded-xl border border-neutral-300 bg-white px-4 py-3 text-sm font-normal text-neutral-900">
+                <option value="unpaid">未払いユーザー</option>
+                <option value="all">すべてのユーザー</option>
+              </select>
+            </label>
+            <label className="text-xs font-bold text-neutral-600">未払いがあるイベント
+              <select value={eventFilter} onChange={(event) => setEventFilter(event.target.value)} className="mt-2 w-full rounded-xl border border-neutral-300 bg-white px-4 py-3 text-sm font-normal text-neutral-900">
+                <option value="">すべての未完了イベント</option>
+                {incompleteEvents.map((event) => <option key={event.id} value={event.id}>{event.title}</option>)}
+              </select>
+            </label>
+            <label className="text-xs font-bold text-neutral-600">並び順
+              <select value={sortBy} onChange={(event) => setSortBy(event.target.value as "event_date" | "user")} className="mt-2 w-full rounded-xl border border-neutral-300 bg-white px-4 py-3 text-sm font-normal text-neutral-900">
+                <option value="event_date">イベント開催日順</option>
+                <option value="user">ユーザー順</option>
+              </select>
+            </label>
+            <label className="text-xs font-bold text-neutral-600">検索
+              <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="参加者名・イベント名" className="mt-2 w-full rounded-xl border border-neutral-300 px-4 py-3 text-sm font-normal text-neutral-900" />
+            </label>
+          </div>
         </header>
 
         {message && <p className="mt-6 rounded-xl bg-red-50 p-4 text-sm text-red-700">{message}</p>}
@@ -102,15 +144,14 @@ export default function AdminParticipantsPage() {
           <p className="mt-8 text-center text-neutral-500">読み込み中…</p>
         ) : (
           <div className="mt-6 overflow-hidden rounded-3xl bg-white shadow-sm">
-            <div className="hidden grid-cols-[1fr_1.5fr_160px_80px] gap-4 border-b bg-neutral-50 px-6 py-4 text-xs font-bold text-neutral-500 md:grid">
-              <span>参加者名</span><span>イベント名</span><span>支払い状況</span><span />
+            <div className="hidden grid-cols-[1fr_1.5fr_160px] gap-4 border-b bg-neutral-50 px-6 py-4 text-xs font-bold text-neutral-500 md:grid">
+              <span>参加者名</span><span>イベント名</span><span>支払い状況</span>
             </div>
             {visibleParticipants.map((row) => (
-              <div key={row.id} className="grid gap-3 border-b border-neutral-100 px-5 py-5 last:border-0 md:grid-cols-[1fr_1.5fr_160px_80px] md:items-center md:gap-4 md:px-6">
+              <div key={row.id} className="grid gap-3 border-b border-neutral-100 px-5 py-5 last:border-0 md:grid-cols-[1fr_1.5fr_160px] md:items-center md:gap-4 md:px-6">
                 <p className="font-bold text-neutral-900">{row.userName}</p>
                 <p className="text-sm text-neutral-700">{row.eventTitle}</p>
                 <PaymentBadge fee={row.eventFee} payment={row.payment} />
-                <Link href={`/admin/participants/${row.id}`} className="text-sm font-bold text-blue-600 underline">編集</Link>
               </div>
             ))}
             {visibleParticipants.length === 0 && <p className="p-10 text-center text-neutral-500">該当する参加者はいません。</p>}
@@ -119,6 +160,15 @@ export default function AdminParticipantsPage() {
       </div>
     </main>
   );
+}
+
+function isOutstandingPayment(row: ParticipantRow) {
+  const activeRegistration = row.status === "reserved" || row.status === "joined";
+  return activeRegistration && row.eventFee > 0 && row.payment?.status !== "paid";
+}
+
+function dateValue(value: string | null) {
+  return value ? new Date(value).getTime() : Number.MAX_SAFE_INTEGER;
 }
 
 function PaymentBadge({ fee, payment }: { fee: number; payment: PaymentRow | null }) {
