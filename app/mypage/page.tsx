@@ -415,8 +415,10 @@ export default function MyPage() {
           </section>
         )}
       </div>
+      <div className="mt-10">
+        <BannerSection banners={banners} />
+      </div>
     </main>
-    <BannerSection banners={banners} />
     </>
   );
 }
