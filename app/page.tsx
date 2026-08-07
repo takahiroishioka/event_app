@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 import ImageCarousel, { type CarouselImage } from "@/components/ImageCarousel";
 import SiteHeader from "@/components/SiteHeader";
 import BannerSection, { type Banner } from "@/components/BannerSection";
+import SocialFooter from "@/components/SocialFooter";
 
 type EventRow = {
   id: string;
@@ -29,11 +30,19 @@ const defaultSettings: TopPageSettings = {
   hero_description: "開催予定のイベントをチェックして、気になるイベントに参加できます。",
 };
 
+const defaultFooterSettings = {
+  brand_name: "shiokan",
+  instagram_url: null,
+  x_url: null,
+  youtube_url: null,
+};
+
 export default function Home() {
   const [events, setEvents] = useState<EventRow[]>([]);
   const [topImages, setTopImages] = useState<CarouselImage[]>([]);
   const [settings, setSettings] = useState<TopPageSettings>(defaultSettings);
   const [banners, setBanners] = useState<Banner[]>([]);
+  const [footerSettings, setFooterSettings] = useState(defaultFooterSettings);
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
 
@@ -42,7 +51,7 @@ export default function Home() {
 
     async function loadEvents() {
       const supabase = createClient();
-      const [eventResult, imageResult, settingsResult, bannerResult] = await Promise.all([
+      const [eventResult, imageResult, settingsResult, bannerResult, footerResult] = await Promise.all([
         supabase
           .from("events")
           .select("id, title, description, start_at, location, fee, image_url")
@@ -65,6 +74,11 @@ export default function Home() {
           .eq("placement", "top")
           .eq("is_active", true)
           .order("sort_order"),
+        supabase
+          .from("footer_settings")
+          .select("brand_name, instagram_url, x_url, youtube_url")
+          .eq("id", true)
+          .maybeSingle(),
       ]);
 
       if (!active) return;
@@ -82,6 +96,10 @@ export default function Home() {
 
       if (!settingsResult.error && settingsResult.data) {
         setSettings(settingsResult.data as TopPageSettings);
+      }
+
+      if (!footerResult.error && footerResult.data) {
+        setFooterSettings(footerResult.data);
       }
 
       if (!bannerResult.error && bannerResult.data?.length) {
@@ -202,6 +220,7 @@ export default function Home() {
           </div>
         )}
       </section>
+      <SocialFooter settings={footerSettings} />
       <BannerSection banners={banners} />
     </main>
   );

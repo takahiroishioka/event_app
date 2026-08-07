@@ -280,6 +280,12 @@ export default function AdminPage() {
               description="TOPページとマイページ下部のリンク付きカルーセルバナーを管理します。"
               actionLabel="バナーを管理"
             />
+            <AdminMenuCard
+              href="/admin/footer"
+              title="フッター管理"
+              description="TOPページ下部の表示名とInstagram・X・YouTubeのリンクを管理します。"
+              actionLabel="フッターを管理"
+            />
           </div>
         </section>
 
