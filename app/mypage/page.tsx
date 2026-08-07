@@ -216,7 +216,15 @@ export default function MyPage() {
         );
       }
 
-      setAllEvents(publishedEvents ?? []);
+      const joinedEventIds = new Set(
+        formattedJoinedEvents.map((event) => event.id)
+      );
+
+      setAllEvents(
+        (publishedEvents ?? []).filter(
+          (event) => !joinedEventIds.has(event.id)
+        )
+      );
       setLoading(false);
     }
 
@@ -324,7 +332,7 @@ export default function MyPage() {
               </p>
 
               <h2 className="mt-1 text-2xl font-bold text-neutral-900">
-                イベント一覧
+                今後のイベント一覧
               </h2>
             </div>
 
@@ -364,80 +372,49 @@ function EventCard({
   joined?: boolean;
 }) {
   return (
-    <article className="flex h-full flex-col overflow-hidden rounded-3xl bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-md">
-      {event.image_url ? (
-        <div className="overflow-hidden bg-neutral-100">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={event.image_url}
-            alt={event.title}
-            className="aspect-[16/7] w-full object-cover"
-          />
-        </div>
-      ) : (
-        <div className="flex aspect-[16/7] w-full items-center justify-center bg-neutral-200">
-          <span className="text-sm font-medium text-neutral-500">
-            イベント画像未登録
-          </span>
-        </div>
-      )}
-
-      <div className="flex flex-1 flex-col p-6">
-        <div className="mb-4 flex items-start justify-between gap-3">
-          <span
-            className={`rounded-full px-3 py-1 text-xs font-bold ${
-              joined
-                ? "bg-green-100 text-green-700"
-                : "bg-neutral-100 text-neutral-600"
-            }`}
-          >
-            {joined ? "参加予定" : "受付中"}
-          </span>
-
-          <span className="text-sm font-bold text-neutral-700">
-            {formatFee(event.fee)}
-          </span>
+    <Link
+      href={`/events/${event.id}`}
+      className="block overflow-hidden rounded-2xl bg-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+    >
+      <div className="grid grid-cols-[55%_45%]">
+        <div className="aspect-video overflow-hidden bg-neutral-200">
+          {event.image_url ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={event.image_url}
+              alt={event.title}
+              className="h-full w-full object-cover"
+            />
+          ) : (
+            <div className="flex h-full items-center justify-center px-3 text-center text-xs font-medium text-neutral-500">
+              イベント画像未登録
+            </div>
+          )}
         </div>
 
-        <h3 className="text-xl font-bold leading-8 text-neutral-900">
+        <div className="min-w-0 p-3 sm:p-5">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className={`rounded-full px-2.5 py-1 text-[11px] font-bold ${joined ? "bg-green-100 text-green-700" : "bg-neutral-100 text-neutral-600"}`}>
+              {joined ? "参加予定" : "受付中"}
+            </span>
+            <span className="text-xs font-bold text-neutral-600">{formatFee(event.fee)}</span>
+          </div>
+          <div className="mt-3 space-y-1 text-xs leading-5 text-neutral-500 sm:text-sm">
+            <p>{formatDate(event.start_at)}</p>
+            <p>{event.location || "会場未定"}</p>
+          </div>
+        </div>
+      </div>
+
+      <div className="border-t border-neutral-100 p-4 sm:p-5">
+        <h3 className="w-full text-base font-bold leading-6 text-neutral-900 sm:text-lg">
           {event.title}
         </h3>
-
-        <p className="mt-3 line-clamp-3 text-sm leading-6 text-neutral-600">
-          {event.description ||
-            "イベントの詳細をご確認ください。"}
+        <p className="mt-2 line-clamp-2 w-full text-xs leading-5 text-neutral-600 sm:text-sm">
+          {event.description || "イベントの詳細をご確認ください。"}
         </p>
-
-        <dl className="mt-6 space-y-3 text-sm">
-          <div className="flex gap-3">
-            <dt className="w-12 shrink-0 font-medium text-neutral-400">
-              日時
-            </dt>
-
-            <dd className="text-neutral-700">
-              {formatDate(event.start_at)}
-            </dd>
-          </div>
-
-          <div className="flex gap-3">
-            <dt className="w-12 shrink-0 font-medium text-neutral-400">
-              会場
-            </dt>
-
-            <dd className="text-neutral-700">
-              {event.location || "未定"}
-            </dd>
-          </div>
-        </dl>
-
-        <Link
-          href={`/events/${event.id}`}
-          className="mt-6 block rounded-xl bg-neutral-900 px-4 py-3 text-center text-sm font-bold text-white transition hover:bg-neutral-700"
-        >
-          詳細を見る
-        </Link>
       </div>
-    </article>
+    </Link>
   );
 }
 

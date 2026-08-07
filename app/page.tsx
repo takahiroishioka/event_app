@@ -139,46 +139,42 @@ export default function Home() {
         {!loading && !errorMessage && events.length > 0 && (
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             {events.map((event) => (
-              <article key={event.id} className="overflow-hidden rounded-3xl bg-white shadow-sm">
-                {event.image_url ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={event.image_url}
-                    alt=""
-                    className="aspect-[16/9] w-full object-cover"
-                  />
-                ) : (
-                  <div className="flex aspect-[16/9] items-center justify-center bg-gradient-to-br from-blue-100 to-indigo-100 text-sm font-bold text-blue-700">
-                    TYPESTYLE EVENT
-                  </div>
-                )}
-
-                <div className="p-6">
-                  <div className="flex flex-wrap gap-2 text-xs font-bold">
-                    <span className="rounded-full bg-blue-50 px-3 py-1 text-blue-700">
-                      {formatDate(event.start_at)}
-                    </span>
-                    <span className="rounded-full bg-neutral-100 px-3 py-1 text-neutral-600">
-                      {formatFee(event.fee)}
-                    </span>
+              <Link key={event.id} href={`/events/${event.id}`} className="block overflow-hidden rounded-2xl bg-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
+                <div className="grid grid-cols-[55%_45%]">
+                  <div className="aspect-video overflow-hidden bg-neutral-200">
+                    {event.image_url ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={event.image_url}
+                        alt={event.title}
+                        className="h-full w-full object-cover"
+                      />
+                    ) : (
+                      <div className="flex h-full items-center justify-center bg-gradient-to-br from-blue-100 to-indigo-100 px-3 text-center text-xs font-bold text-blue-700">
+                        {settings.site_name}
+                      </div>
+                    )}
                   </div>
 
-                  <h3 className="mt-4 text-xl font-black text-neutral-900">{event.title}</h3>
-                  <p className="mt-2 text-sm text-neutral-500">{event.location || "会場未定"}</p>
-                  {event.description && (
-                    <p className="mt-4 line-clamp-2 text-sm leading-6 text-neutral-600">
-                      {event.description}
-                    </p>
-                  )}
-
-                  <Link
-                    href={`/events/${event.id}`}
-                    className="mt-6 block rounded-xl border border-neutral-300 px-4 py-3 text-center text-sm font-bold text-neutral-800 transition hover:bg-neutral-50"
-                  >
-                    詳細を見る
-                  </Link>
+                  <div className="min-w-0 p-3 sm:p-4">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="rounded-full bg-blue-50 px-2.5 py-1 text-[11px] font-bold text-blue-700">受付中</span>
+                      <span className="text-xs font-bold text-neutral-600">{formatFee(event.fee)}</span>
+                    </div>
+                    <div className="mt-3 space-y-1 text-xs leading-5 text-neutral-500">
+                      <p>{formatDate(event.start_at)}</p>
+                      <p>{event.location || "会場未定"}</p>
+                    </div>
+                  </div>
                 </div>
-              </article>
+
+                <div className="border-t border-neutral-100 p-4 sm:p-5">
+                  <h3 className="w-full text-base font-bold leading-6 text-neutral-900 sm:text-lg">{event.title}</h3>
+                  <p className="mt-2 line-clamp-2 w-full text-xs leading-5 text-neutral-600 sm:text-sm">
+                    {event.description || "イベントの詳細をご確認ください。"}
+                  </p>
+                </div>
+              </Link>
             ))}
           </div>
         )}
