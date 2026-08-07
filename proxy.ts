@@ -41,9 +41,12 @@ export async function proxy(request: NextRequest) {
 
   const pathname = request.nextUrl.pathname;
 
+  const isPublicEventDetail =
+    /^\/events\/[^/]+\/?$/.test(pathname);
+
   const isPublicPage =
     pathname === "/" ||
-    pathname.startsWith("/events/") ||
+    isPublicEventDetail ||
     pathname.startsWith("/login") ||
     pathname.startsWith("/signup") ||
     pathname.startsWith("/auth/callback");

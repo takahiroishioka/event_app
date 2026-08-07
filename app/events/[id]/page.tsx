@@ -417,6 +417,12 @@ export default function EventDetailPage() {
     userEvent?.status ===
       "cancel_requested";
 
+  const canChoosePayment =
+    event !== null &&
+    event.fee > 0 &&
+    (userEvent?.status === "reserved" ||
+      userEvent?.status === "joined");
+
   async function saveAnswers(
     userEventId: string
   ) {
@@ -950,6 +956,22 @@ export default function EventDetailPage() {
             </section>
           </div>
         </article>
+
+        {canChoosePayment && (
+          <section className="mt-6 rounded-3xl bg-white p-6 shadow-sm sm:p-8">
+            <p className="text-sm font-bold text-blue-600">PAYMENT</p>
+            <h2 className="mt-2 text-xl font-bold text-neutral-900">参加費のお支払い</h2>
+            <p className="mt-3 text-sm leading-6 text-neutral-600">
+              参加費は{formatFee(event.fee)}です。銀行振込または現金支払いを選択してください。
+            </p>
+            <Link
+              href={`/events/${event.id}/payment`}
+              className="mt-5 block rounded-xl bg-blue-600 px-5 py-4 text-center font-bold text-white transition hover:bg-blue-700"
+            >
+              支払い方法を選ぶ
+            </Link>
+          </section>
+        )}
 
         {canJoin && (
           <div className="mt-6">
