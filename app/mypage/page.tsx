@@ -39,6 +39,8 @@ export default function MyPage() {
 
   const [joinedEvents, setJoinedEvents] = useState<EventData[]>([]);
   const [allEvents, setAllEvents] = useState<EventData[]>([]);
+  const [pastEvents, setPastEvents] = useState<EventData[]>([]);
+  const [showPastEvents, setShowPastEvents] = useState(false);
   const [banners, setBanners] = useState<Banner[]>([]);
 
   const [loading, setLoading] = useState(true);
@@ -180,7 +182,8 @@ export default function MyPage() {
             return [row.events];
           }) ?? [];
 
-      setJoinedEvents(formattedJoinedEvents);
+      const upcomingJoinedEvents = formattedJoinedEvents.filter((event) => !isPastEvent(event)).sort(compareEventDates);
+      setJoinedEvents(upcomingJoinedEvents);
 
       /*
        * 公開中のイベントを取得
@@ -218,15 +221,20 @@ export default function MyPage() {
         );
       }
 
-      const joinedEventIds = new Set(
-        formattedJoinedEvents.map((event) => event.id)
-      );
+      const joinedEventIds = new Set(formattedJoinedEvents.map((event) => event.id));
+      const publishedEventRows = (publishedEvents ?? []) as EventData[];
 
       setAllEvents(
-        (publishedEvents ?? []).filter(
-          (event) => !joinedEventIds.has(event.id)
-        )
+        publishedEventRows
+          .filter((event) => !joinedEventIds.has(event.id) && !isPastEvent(event))
+          .sort(compareEventDates)
       );
+
+      const pastEventMap = new Map<string, EventData>();
+      [...formattedJoinedEvents, ...publishedEventRows]
+        .filter(isPastEvent)
+        .forEach((event) => pastEventMap.set(event.id, event));
+      setPastEvents([...pastEventMap.values()].sort(compareEventDates));
 
       const { data: bannerRows, error: bannerError } = await supabase
         .from("banners")
@@ -352,7 +360,7 @@ export default function MyPage() {
           )}
         </section>
 
-        <section>
+        <section className="mb-10">
           <div className="mb-5 flex items-end justify-between gap-4">
             <div>
               <p className="text-sm font-medium text-neutral-500">
@@ -386,6 +394,26 @@ export default function MyPage() {
             </div>
           )}
         </section>
+
+        {pastEvents.length > 0 && (
+          <section className="mb-10">
+            <button
+              type="button"
+              onClick={() => setShowPastEvents((current) => !current)}
+              className="w-full rounded-xl border border-neutral-300 bg-white px-5 py-4 font-bold text-neutral-800 shadow-sm transition hover:bg-neutral-50"
+            >
+              {showPastEvents ? "これまでのイベントを閉じる" : "これまでのイベントを見る"}
+            </button>
+            {showPastEvents && (
+              <div className="mt-6">
+                <h2 className="mb-5 text-2xl font-bold text-neutral-900">開催日の過ぎたイベント</h2>
+                <div className="space-y-5">
+                  {pastEvents.map((event) => <EventCard key={event.id} event={event} past />)}
+                </div>
+              </div>
+            )}
+          </section>
+        )}
       </div>
     </main>
     <BannerSection banners={banners} />
@@ -396,9 +424,11 @@ export default function MyPage() {
 function EventCard({
   event,
   joined = false,
+  past = false,
 }: {
   event: EventData;
   joined?: boolean;
+  past?: boolean;
 }) {
   return (
     <Link
@@ -423,8 +453,8 @@ function EventCard({
 
         <div className="min-w-0 p-3 sm:p-5">
           <div className="flex flex-wrap items-center gap-2">
-            <span className={`rounded-full px-2.5 py-1 text-[11px] font-bold ${joined ? "bg-green-100 text-green-700" : "bg-neutral-100 text-neutral-600"}`}>
-              {joined ? "参加予定" : "受付中"}
+            <span className={`rounded-full px-2.5 py-1 text-[11px] font-bold ${past ? "bg-neutral-200 text-neutral-700" : joined ? "bg-green-100 text-green-700" : "bg-neutral-100 text-neutral-600"}`}>
+              {past ? "開催終了" : joined ? "参加予定" : "受付中"}
             </span>
             <span className="text-xs font-bold text-neutral-600">{formatFee(event.fee)}</span>
           </div>
@@ -468,4 +498,15 @@ function formatFee(fee: number) {
   }
 
   return `${fee.toLocaleString("ja-JP")}円`;
+}
+
+function isPastEvent(event: EventData) {
+  const boundary = event.end_at ?? event.start_at;
+  return boundary ? new Date(boundary).getTime() < Date.now() : false;
+}
+
+function compareEventDates(a: EventData, b: EventData) {
+  const aTime = a.start_at ? new Date(a.start_at).getTime() : Number.MAX_SAFE_INTEGER;
+  const bTime = b.start_at ? new Date(b.start_at).getTime() : Number.MAX_SAFE_INTEGER;
+  return aTime - bTime;
 }

@@ -19,6 +19,7 @@ type EventRow = {
   status: string;
   capacity: number | null;
   fee: number;
+  image_url: string | null;
 };
 
 export default function AdminEventsPage() {
@@ -70,7 +71,8 @@ export default function AdminEventsPage() {
         location,
         status,
         capacity,
-        fee
+        fee,
+        image_url
       `)
       .order("start_at", {
         ascending: false,
@@ -96,7 +98,8 @@ export default function AdminEventsPage() {
   }, [router]);
 
   useEffect(() => {
-    loadEvents();
+    const timer = window.setTimeout(() => void loadEvents(), 0);
+    return () => window.clearTimeout(timer);
   }, [loadEvents]);
 
   if (loading) {
@@ -163,14 +166,22 @@ export default function AdminEventsPage() {
             </p>
           </div>
         ) : (
-          <div className="mt-6 space-y-4">
+          <div className="mt-6 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             {events.map((event) => (
               <article
                 key={event.id}
-                className="rounded-3xl bg-white p-6 shadow-sm"
+                className="flex overflow-hidden rounded-3xl bg-white shadow-sm"
               >
-                <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
-                  <div className="min-w-0">
+                <div className="flex w-full flex-col">
+                  <div className="aspect-video overflow-hidden bg-neutral-200">
+                    {event.image_url ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={event.image_url} alt={event.title} className="h-full w-full object-cover" />
+                    ) : (
+                      <div className="flex h-full items-center justify-center text-sm font-bold text-neutral-500">画像未登録</div>
+                    )}
+                  </div>
+                  <div className="flex flex-1 flex-col p-5">
                     <div className="flex flex-wrap items-center gap-2">
                       <EventStatusBadge
                         status={event.status}
@@ -181,7 +192,7 @@ export default function AdminEventsPage() {
                       </span>
                     </div>
 
-                    <h2 className="mt-4 text-xl font-bold text-neutral-900">
+                    <h2 className="mt-4 text-lg font-bold text-neutral-900">
                       {event.title}
                     </h2>
 
@@ -194,14 +205,13 @@ export default function AdminEventsPage() {
                         {event.location || "会場未定"}
                       </p>
                     </div>
+                    <Link
+                      href={`/admin/events/${event.id}`}
+                      className="mt-5 block rounded-xl border border-neutral-300 bg-white px-5 py-3 text-center text-sm font-bold text-neutral-800 transition hover:bg-neutral-50"
+                    >
+                      管理・回答を見る
+                    </Link>
                   </div>
-
-                  <Link
-                    href={`/admin/events/${event.id}`}
-                    className="shrink-0 rounded-xl border border-neutral-300 bg-white px-5 py-3 text-center text-sm font-bold text-neutral-800 transition hover:bg-neutral-50"
-                  >
-                    管理・回答を見る
-                  </Link>
                 </div>
               </article>
             ))}
