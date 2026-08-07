@@ -468,7 +468,7 @@ export default function EventDetailPage() {
       setMessage(`支払済み申請を送信できませんでした：${error.message}`);
     } else {
       setPayment(data as PaymentData);
-      setMessage("お支払い有難うございます。確認完了までお待ちください");
+      setMessage("");
     }
     setProcessing(false);
   }
@@ -1019,14 +1019,16 @@ export default function EventDetailPage() {
                 ? "必要に応じて備考を登録できます。"
                 : `参加費は${formatFee(event.fee)}です。支払い方法を登録してください。`}
             </p>
-            <Link
-              href={`/events/${event.id}/payment`}
-              className="mt-5 block rounded-xl bg-blue-600 px-5 py-4 text-center font-bold text-white transition hover:bg-blue-700"
-            >
-              {event.fee === 0
-                ? payment ? "備考を変更" : "備考を登録"
-                : payment ? "支払方法変更" : "支払い方法を選ぶ"}
-            </Link>
+            {payment?.status !== "confirmation_requested" && payment?.status !== "paid" && (
+              <Link
+                href={`/events/${event.id}/payment`}
+                className="mt-5 block rounded-xl bg-blue-600 px-5 py-4 text-center font-bold text-white transition hover:bg-blue-700"
+              >
+                {event.fee === 0
+                  ? payment ? "備考を変更" : "備考を登録"
+                  : payment ? "支払方法変更" : "支払い方法を選ぶ"}
+              </Link>
+            )}
             {event.fee > 0 && payment?.status === "pending" && (
               <button
                 type="button"
