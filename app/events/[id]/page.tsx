@@ -70,6 +70,9 @@ export default function EventDetailPage() {
   const [userEvent, setUserEvent] =
     useState<UserEventData | null>(null);
 
+  const [isLoggedIn, setIsLoggedIn] =
+    useState(false);
+
   /*
    * 参加人数は画面には表示しません。
    * 定員判定・キャンセル待ち判定のためだけに使います。
@@ -108,6 +111,8 @@ export default function EventDetailPage() {
         error: userError,
       } = await supabase.auth.getUser();
 
+      setIsLoggedIn(Boolean(user));
+
       if (userError) {
         console.error(
           "ログイン情報取得エラー:",
@@ -119,15 +124,6 @@ export default function EventDetailPage() {
           "ログイン情報を確認できませんでした。通信状態を確認して再読み込みしてください。"
         );
         setLoading(false);
-        return;
-      }
-
-      if (!user) {
-        router.replace(
-          `/login?redirect=${encodeURIComponent(
-            `/events/${eventId}`
-          )}`
-        );
         return;
       }
 
@@ -190,26 +186,28 @@ export default function EventDetailPage() {
         setEventImages((imageData ?? []) as CarouselImage[]);
       }
 
-      const {
-        data: registrationData,
-        error: registrationError,
-      } = await supabase
-        .from("user_events")
-        .select("id, status")
-        .eq("user_id", user.id)
-        .eq("event_id", eventId)
-        .maybeSingle();
+      if (user) {
+        const {
+          data: registrationData,
+          error: registrationError,
+        } = await supabase
+          .from("user_events")
+          .select("id, status")
+          .eq("user_id", user.id)
+          .eq("event_id", eventId)
+          .maybeSingle();
 
-      if (registrationError) {
-        console.error(
-          "参加情報取得エラー:",
-          registrationError
-        );
+        if (registrationError) {
+          console.error(
+            "参加情報取得エラー:",
+            registrationError
+          );
+        }
+
+        setUserEvent(registrationData ?? null);
+      } else {
+        setUserEvent(null);
       }
-
-      setUserEvent(
-        registrationData ?? null
-      );
 
       const {
         count,
@@ -235,6 +233,12 @@ export default function EventDetailPage() {
       }
 
       setParticipantCount(count ?? 0);
+
+      if (!user) {
+        setQuestions([]);
+        setLoading(false);
+        return;
+      }
 
       const {
         data: questionRows,
@@ -953,16 +957,18 @@ export default function EventDetailPage() {
 
         {canJoin && (
           <div className="mt-6">
-            <EventApplicationQuestions
-              questions={questions}
-              answers={answers}
-              disabled={processing}
-              onChange={
-                handleAnswerChange
-              }
-            />
+            {isLoggedIn && (
+              <EventApplicationQuestions
+                questions={questions}
+                answers={answers}
+                disabled={processing}
+                onChange={
+                  handleAnswerChange
+                }
+              />
+            )}
 
-            {!hasCompletedRequiredQuestions && (
+            {isLoggedIn && !hasCompletedRequiredQuestions && (
               <p className="mt-4 rounded-2xl bg-orange-50 px-5 py-4 text-sm font-medium text-orange-700">
                 必須の質問に回答すると、参加ボタンを押せるようになります。
               </p>
@@ -973,13 +979,15 @@ export default function EventDetailPage() {
               onClick={handleJoin}
               disabled={
                 processing ||
-                !hasCompletedRequiredQuestions
+                (isLoggedIn && !hasCompletedRequiredQuestions)
               }
               className="mt-5 w-full rounded-xl bg-blue-600 px-5 py-4 font-bold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-neutral-400"
             >
               {processing
                 ? "処理中..."
-                : isFull
+                : !isLoggedIn
+                  ? "ログインして参加する"
+                  : isFull
                   ? "キャンセル待ちに登録"
                   : "このイベントに参加する"}
             </button>

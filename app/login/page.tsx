@@ -17,11 +17,13 @@ export default function LoginPage() {
     setLoading(true);
     setMessage("");
 
+    const redirectPath = getRedirectPath();
+
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
         redirectTo:
-          `${window.location.origin}/auth/callback?next=/mypage`,
+          `${window.location.origin}/auth/callback?next=${encodeURIComponent(redirectPath)}`,
       },
     });
 
@@ -46,7 +48,7 @@ export default function LoginPage() {
       return;
     }
 
-    router.push("/mypage");
+    router.push(getRedirectPath());
     router.refresh();
   }
 
@@ -157,6 +159,14 @@ export default function LoginPage() {
       </div>
     </main>
   );
+}
+
+function getRedirectPath() {
+  const requestedPath = new URLSearchParams(window.location.search).get("redirect");
+
+  return requestedPath?.startsWith("/") && !requestedPath.startsWith("//")
+    ? requestedPath
+    : "/mypage";
 }
 
 function GoogleIcon() {
