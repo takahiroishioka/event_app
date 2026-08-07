@@ -435,7 +435,7 @@ export default function NewEventPage() {
 
           capacity: capacityNumber,
           fee: feeNumber,
-          payment_management_required: paymentManagementRequired,
+          payment_management_required: feeNumber > 0 || paymentManagementRequired,
           payment_note: paymentNote.trim() || null,
           status,
         })
@@ -780,9 +780,10 @@ export default function NewEventPage() {
 
               <div className="rounded-2xl border border-neutral-200 p-5">
                 <label className="flex items-center gap-3 text-sm font-bold">
-                  <input type="checkbox" checked={paymentManagementRequired} onChange={(event) => setPaymentManagementRequired(event.target.checked)} disabled={saving} />
+                  <input type="checkbox" checked={Number(fee) > 0 || paymentManagementRequired} onChange={(event) => setPaymentManagementRequired(event.target.checked)} disabled={saving || Number(fee) > 0} />
                   支払管理を行う
                 </label>
+                <p className="mt-2 text-xs text-neutral-500">有料イベントでは自動的に有効になります。無料の場合のみ変更できます。</p>
                 <FormField label="参加費の備考">
                   <textarea value={paymentNote} onChange={(event) => setPaymentNote(event.target.value)} placeholder="例：ご自分の飲食代のみ／会場費は割り勘" rows={3} disabled={saving} className={inputClass} />
                 </FormField>
