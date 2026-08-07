@@ -162,7 +162,11 @@ export default function AdminPage() {
   );
 
   useEffect(() => {
-    loadAdmin();
+    const timer = window.setTimeout(() => {
+      void loadAdmin();
+    }, 0);
+
+    return () => window.clearTimeout(timer);
   }, [loadAdmin]);
 
   if (loading) {
@@ -250,10 +254,10 @@ export default function AdminPage() {
             />
 
             <AdminMenuCard
-              href="/admin/events/new"
-              title="イベント作成"
-              description="新しいイベントと、参加申請時の質問を登録します。"
-              actionLabel="イベントを作成"
+              href="/admin/participants"
+              title="参加者一覧"
+              description="すべてのイベントの参加者名、イベント名、支払い状況をまとめて確認します。"
+              actionLabel="参加者を確認"
             />
           </div>
         </section>
