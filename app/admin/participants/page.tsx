@@ -184,7 +184,7 @@ export default function AdminParticipantsPage() {
                       disabled={confirmingPaymentId === row.payment.id}
                       className="rounded-lg bg-blue-600 px-3 py-2 text-xs font-bold text-white disabled:bg-neutral-400"
                     >
-                      {confirmingPaymentId === row.payment.id ? "確認中…" : "確認"}
+                      {confirmingPaymentId === row.payment.id ? "確認中…" : "支払確認"}
                     </button>
                   )}
                 </div>
@@ -208,7 +208,7 @@ function dateValue(value: string | null) {
 }
 
 function PaymentBadge({ fee, payment }: { fee: number; payment: PaymentRow | null }) {
-  const label = fee === 0 ? "無料" : !payment ? "未選択" : payment.status === "paid" ? "支払済み" : payment.status === "confirmation_requested" ? "確認申請" : payment.status === "pending" ? "支払い待ち" : payment.status;
+  const label = fee === 0 ? "無料" : !payment ? "未選択" : payment.status === "paid" ? "支払済み" : payment.status === "confirmation_requested" ? "支払確認" : payment.status === "pending" ? "支払い待ち" : payment.status;
   const color = label === "支払済み" || label === "無料" ? "bg-green-100 text-green-700" : label === "未選択" ? "bg-orange-100 text-orange-700" : "bg-blue-100 text-blue-700";
   return <span className={`w-fit rounded-full px-3 py-1 text-xs font-bold ${color}`}>{label}</span>;
 }
