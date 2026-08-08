@@ -44,6 +44,7 @@ export default function MyPage() {
   const [user, setUser] = useState<User | null>(null);
   const [userName, setUserName] = useState("");
   const [isAdmin, setIsAdmin] = useState(false);
+  const [canManageEvents, setCanManageEvents] = useState(false);
 
   const [joinedEvents, setJoinedEvents] = useState<EventData[]>([]);
   const [allEvents, setAllEvents] = useState<EventData[]>([]);
@@ -131,7 +132,20 @@ export default function MyPage() {
 
           setIsAdmin(false);
         } else {
-          setIsAdmin(Boolean(userAdminRole));
+          const globalAdmin = Boolean(userAdminRole);
+          setIsAdmin(globalAdmin);
+          if (globalAdmin) {
+            setCanManageEvents(true);
+          } else {
+            const { data: managerRole, error: managerError } = await supabase
+              .from("event_managers")
+              .select("id")
+              .eq("user_id", user.id)
+              .limit(1)
+              .maybeSingle();
+            if (managerError) console.error("共同管理権限取得エラー:", managerError);
+            setCanManageEvents(Boolean(managerRole));
+          }
         }
       }
 
@@ -324,6 +338,11 @@ export default function MyPage() {
                   className="rounded-xl bg-blue-600 px-5 py-3 text-sm font-bold text-white transition hover:bg-blue-700"
                 >
                   管理者メニュー
+                </Link>
+              )}
+              {!isAdmin && canManageEvents && (
+                <Link href="/admin/events" className="rounded-xl bg-blue-600 px-5 py-3 text-sm font-bold text-white transition hover:bg-blue-700">
+                  担当イベント管理
                 </Link>
               )}
 

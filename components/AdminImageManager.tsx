@@ -18,10 +18,12 @@ export default function AdminImageManager({
   placement,
   eventId = null,
   bannerId = null,
+  readOnly = false,
 }: {
   placement: "top" | "event" | "banner";
   eventId?: string | null;
   bannerId?: string | null;
+  readOnly?: boolean;
 }) {
   const [images, setImages] = useState<SiteImage[]>([]);
   const [altText, setAltText] = useState("");
@@ -116,10 +118,10 @@ export default function AdminImageManager({
       <label className="mt-5 block text-sm font-bold">画像の説明（任意）
         <input value={altText} onChange={(event) => setAltText(event.target.value)} className="mt-2 w-full rounded-xl border border-neutral-300 p-3 font-normal" />
       </label>
-      <label className="mt-4 inline-flex cursor-pointer rounded-xl bg-blue-600 px-5 py-3 text-sm font-bold text-white">
+      {!readOnly && <label className="mt-4 inline-flex cursor-pointer rounded-xl bg-blue-600 px-5 py-3 text-sm font-bold text-white">
         {saving ? "処理中…" : "16:9画像を追加"}
         <input type="file" accept="image/jpeg,image/png,image/webp,image/gif" disabled={saving} onChange={uploadImage} className="hidden" />
-      </label>
+      </label>}
       {message && <p className="mt-4 rounded-xl bg-neutral-100 p-4 text-sm">{message}</p>}
 
       <div className="mt-6 grid gap-5 md:grid-cols-2 lg:grid-cols-3">
@@ -130,10 +132,10 @@ export default function AdminImageManager({
             <div className="p-4">
               <div className="flex items-center gap-3">
                 <label className="flex items-center gap-2 text-sm">
-                  <input type="checkbox" checked={image.is_active} disabled={saving} onChange={(event) => updateImage(image.id, { is_active: event.target.checked })} /> 公開
+                  <input type="checkbox" checked={image.is_active} disabled={saving || readOnly} onChange={(event) => updateImage(image.id, { is_active: event.target.checked })} /> 公開
                 </label>
                 <label className="ml-auto text-sm">順番
-                  <input type="number" value={image.sort_order} disabled={saving} onChange={(event) => updateImage(image.id, { sort_order: Number(event.target.value) })} className="ml-2 w-16 rounded-lg border p-2" />
+                  <input type="number" value={image.sort_order} disabled={saving || readOnly} onChange={(event) => updateImage(image.id, { sort_order: Number(event.target.value) })} className="ml-2 w-16 rounded-lg border p-2" />
                 </label>
               </div>
               {placement === "top" && (
@@ -149,7 +151,7 @@ export default function AdminImageManager({
                   />
                 </label>
               )}
-              <button type="button" disabled={saving} onClick={() => deleteImage(image.id)} className="mt-4 text-sm font-bold text-red-600 underline">削除</button>
+              {!readOnly && <button type="button" disabled={saving} onClick={() => deleteImage(image.id)} className="mt-4 text-sm font-bold text-red-600 underline">削除</button>}
             </div>
           </article>
         ))}

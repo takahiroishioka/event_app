@@ -28,6 +28,7 @@ export default function AdminEventsPage() {
   const [events, setEvents] = useState<EventRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
+  const [isGlobalAdmin, setIsGlobalAdmin] = useState(false);
 
   const loadEvents = useCallback(async () => {
     setLoading(true);
@@ -61,6 +62,9 @@ export default function AdminEventsPage() {
 
       return;
     }
+
+    const { data: adminAccess } = await supabase.rpc("is_global_admin");
+    setIsGlobalAdmin(Boolean(adminAccess));
 
     const { data, error } = await supabase
       .from("events")
@@ -117,10 +121,10 @@ export default function AdminEventsPage() {
       <div className="mx-auto max-w-5xl">
         <div className="mb-6">
           <Link
-            href="/admin"
+            href={isGlobalAdmin ? "/admin" : "/mypage"}
             className="text-sm font-bold text-neutral-600 underline underline-offset-4"
           >
-            ← 管理画面へ戻る
+            ← {isGlobalAdmin ? "管理画面" : "マイページ"}へ戻る
           </Link>
         </div>
 
@@ -140,12 +144,12 @@ export default function AdminEventsPage() {
               </p>
             </div>
 
-            <Link
+            {isGlobalAdmin && <Link
               href="/admin/events/new"
               className="shrink-0 rounded-xl bg-blue-600 px-5 py-3 text-center text-sm font-bold text-white transition hover:bg-blue-700"
             >
               ＋ イベントを作成
-            </Link>
+            </Link>}
           </div>
         </header>
 

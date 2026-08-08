@@ -12,6 +12,7 @@ import {
 import { useParams, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import AdminImageManager from "@/components/AdminImageManager";
+import AdminEventManagers from "@/components/AdminEventManagers";
 
 const supabase = createClient();
 
@@ -125,6 +126,8 @@ export default function AdminEventDetailPage() {
   const [isError, setIsError] =
     useState(false);
 
+  const [canEditEvent, setCanEditEvent] = useState(false);
+
   const loadPage = useCallback(async () => {
     setLoading(true);
     setMessage("");
@@ -157,6 +160,9 @@ export default function AdminEventDetailPage() {
       );
       return;
     }
+
+    const { data: editAccess } = await supabase.rpc("can_manage_event", { p_event_id: eventId, p_edit_required: true });
+    setCanEditEvent(Boolean(editAccess));
 
     /*
      * イベント情報を取得
@@ -703,6 +709,12 @@ function sanitizeFileName(
   ) {
     submitEvent.preventDefault();
 
+    if (!canEditEvent) {
+      setIsError(true);
+      setMessage("このイベントは閲覧のみ可能です。");
+      return;
+    }
+
     setMessage("");
     setIsError(false);
 
@@ -970,7 +982,8 @@ function sanitizeFileName(
 
         {activeTab === "edit" && (
           <div className="mt-6 space-y-6">
-            <AdminImageManager placement="event" eventId={eventId} />
+            <AdminImageManager placement="event" eventId={eventId} readOnly={!canEditEvent} />
+            <div className="mt-6"><AdminEventManagers eventId={eventId} /></div>
 
           <form
             onSubmit={handleSave}
@@ -1245,7 +1258,7 @@ function sanitizeFileName(
               </FormField>
             </div>
 
-            <button
+            {canEditEvent ? <button
               type="submit"
               disabled={
                 saving ||
@@ -1259,7 +1272,7 @@ function sanitizeFileName(
                 : saving
                   ? "保存しています..."
                   : "変更を保存"}
-            </button>
+            </button> : <p className="mt-8 rounded-xl bg-neutral-100 p-4 text-center text-sm font-bold text-neutral-600">閲覧権限のため変更は保存できません。</p>}
           </form>
           </div>
         )}
