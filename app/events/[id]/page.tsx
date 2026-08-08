@@ -42,6 +42,7 @@ type EventData = {
 type UserEventData = {
   id: string;
   status: string;
+  refund_method?: string | null;
 };
 
 type PaymentData = {
@@ -86,6 +87,8 @@ export default function EventDetailPage() {
 
   const [isLoggedIn, setIsLoggedIn] =
     useState(false);
+
+  const [refundMethod, setRefundMethod] = useState<"bank" | "hand" | "">("");
 
   /*
    * 参加人数は画面には表示しません。
@@ -201,7 +204,7 @@ export default function EventDetailPage() {
           error: registrationError,
         } = await supabase
           .from("user_events")
-          .select("id, status")
+          .select("id, status, refund_method")
           .eq("user_id", user.id)
           .eq("event_id", eventId)
           .maybeSingle();
@@ -214,6 +217,7 @@ export default function EventDetailPage() {
         }
 
         setUserEvent(registrationData ?? null);
+        setRefundMethod((registrationData?.refund_method as "bank" | "hand" | null) ?? "");
 
         if (registrationData) {
           const { data: paymentData, error: paymentError } = await supabase
@@ -829,6 +833,12 @@ export default function EventDetailPage() {
       return;
     }
 
+    if (payment?.status === "paid" && !refundMethod) {
+      setIsError(true);
+      setMessage("返金方法を選択してください。");
+      return;
+    }
+
     const confirmed =
       window.confirm(
         "キャンセルを申請します。\n管理者が確認するまで参加状態は確定しません。\nよろしいですか？"
@@ -853,9 +863,10 @@ export default function EventDetailPage() {
 
         cancellation_requested_at:
           new Date().toISOString(),
+        refund_method: payment?.status === "paid" ? refundMethod : null,
       })
       .eq("id", userEvent.id)
-      .select("id, status")
+      .select("id, status, refund_method")
       .single();
 
     if (error) {
@@ -1099,6 +1110,22 @@ export default function EventDetailPage() {
         {isJoined &&
           userEvent?.status !==
             "cancel_requested" && (
+            <div className="mt-6">
+            {payment?.status === "paid" && (
+              <div className="mb-4 rounded-2xl bg-white p-5 shadow-sm">
+                <p className="font-bold text-neutral-900">返金方法</p>
+                <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                  <label className={`rounded-xl border-2 p-4 ${refundMethod === "bank" ? "border-blue-600 bg-blue-50" : "border-neutral-200"}`}>
+                    <input type="radio" name="refund-method" checked={refundMethod === "bank"} onChange={() => setRefundMethod("bank")} className="mr-2" />銀行振込
+                    <p className="mt-2 text-xs text-neutral-500">振込手数料は参加者負担となり、返金額から差し引かれます。</p>
+                  </label>
+                  <label className={`rounded-xl border-2 p-4 ${refundMethod === "hand" ? "border-blue-600 bg-blue-50" : "border-neutral-200"}`}>
+                    <input type="radio" name="refund-method" checked={refundMethod === "hand"} onChange={() => setRefundMethod("hand")} className="mr-2" />手渡し
+                    <p className="mt-2 text-xs text-neutral-500">主催者から直接返金します。</p>
+                  </label>
+                </div>
+              </div>
+            )}
             <button
               type="button"
               onClick={
@@ -1111,6 +1138,7 @@ export default function EventDetailPage() {
                 ? "処理中..."
                 : "キャンセルを申請する"}
             </button>
+            </div>
           )}
 
         {userEvent?.status ===
