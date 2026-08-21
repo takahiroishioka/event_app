@@ -132,7 +132,9 @@ export default function Home() {
       <SiteHeader siteName={settings.site_name} />
 
       {topImages.length > 0 && (
-        <ImageCarousel images={topImages} className="w-full" />
+        <div className="mx-auto w-full max-w-6xl px-4 sm:px-6">
+          <ImageCarousel images={topImages} className="w-full" />
+        </div>
       )}
 
       <section className="bg-white px-4 py-16 text-neutral-900 sm:px-6 sm:py-20">
