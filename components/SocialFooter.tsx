@@ -14,7 +14,7 @@ export default function SocialFooter({ settings }: { settings: SocialFooterSetti
 
   return (
     <footer className="border-y border-neutral-200 bg-white px-4 py-10 sm:px-6">
-      <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-5 sm:flex-row">
+      <div className="mx-auto flex max-w-6xl flex-col items-center justify-center gap-5 text-center">
         <p className="text-xl font-black tracking-wider text-neutral-900">{settings.brand_name}</p>
         {links.length > 0 && (
           <div className="flex items-center gap-5">

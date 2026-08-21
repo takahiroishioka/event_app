@@ -180,7 +180,7 @@ export default function Home() {
         )}
 
         {!loading && !errorMessage && events.length > 0 && (
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-6 md:grid-cols-2">
             {events.map((event) => (
               <Link key={event.id} href={`/events/${event.id}`} className="block overflow-hidden rounded-2xl bg-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
                 <div className="grid grid-cols-[55%_45%]">
