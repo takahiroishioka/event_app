@@ -87,7 +87,7 @@ export default function Home() {
         console.error("イベント一覧取得エラー:", eventResult.error);
         setErrorMessage("イベントを読み込めませんでした。時間をおいて再度お試しください。");
       } else {
-        setEvents((eventResult.data ?? []) as EventRow[]);
+        setEvents(((eventResult.data ?? []) as EventRow[]).filter((event) => !isPastEvent(event)));
       }
 
       if (!imageResult.error) {
@@ -242,4 +242,8 @@ function formatDate(value: string | null) {
 
 function formatFee(fee: number) {
   return fee === 0 ? "無料" : `${fee.toLocaleString("ja-JP")}円`;
+}
+
+function isPastEvent(event: EventRow) {
+  return event.start_at ? new Date(event.start_at).getTime() < Date.now() : false;
 }
