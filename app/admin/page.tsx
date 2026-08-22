@@ -259,6 +259,13 @@ export default function AdminPage() {
               description="すべてのイベントの参加者名、イベント名、支払い状況をまとめて確認します。"
               actionLabel="参加者を確認"
             />
+
+            <AdminMenuCard
+              href="/admin/ubm"
+              title="UBM権限管理"
+              description="ユーザーにUBM限定権限を付与、または解除します。"
+              actionLabel="UBM権限を管理"
+            />
           </div>
         </section>
 

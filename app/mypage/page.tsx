@@ -44,6 +44,7 @@ export default function MyPage() {
   const [user, setUser] = useState<User | null>(null);
   const [userName, setUserName] = useState("");
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isUbm, setIsUbm] = useState(false);
   const [canManageEvents, setCanManageEvents] = useState(false);
 
   const [joinedEvents, setJoinedEvents] = useState<EventData[]>([]);
@@ -94,6 +95,10 @@ export default function MyPage() {
         "";
 
       setUserName(displayName);
+
+      const { data: ubmAccess, error: ubmAccessError } = await supabase.rpc("is_ubm_restricted_user");
+      if (ubmAccessError) console.error("UBM権限取得エラー:", ubmAccessError);
+      setIsUbm(Boolean(ubmAccess));
 
       /*
        * adminロールのIDを取得
@@ -343,6 +348,11 @@ export default function MyPage() {
               {!isAdmin && canManageEvents && (
                 <Link href="/admin/events" className="rounded-xl bg-blue-600 px-5 py-3 text-sm font-bold text-white transition hover:bg-blue-700">
                   担当イベント管理
+                </Link>
+              )}
+              {isUbm && (
+                <Link href="/ubm/upgrade" className="rounded-xl border border-violet-300 bg-white px-5 py-3 text-sm font-bold text-violet-700 transition hover:bg-violet-50">
+                  一般権限へ変更
                 </Link>
               )}
 

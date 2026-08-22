@@ -61,6 +61,7 @@ export default function NewEventPage() {
   const [fee, setFee] = useState("0");
   const [paymentManagementRequired, setPaymentManagementRequired] = useState(false);
   const [paymentNote, setPaymentNote] = useState("");
+  const [isUbm, setIsUbm] = useState(false);
 
   const [status, setStatus] =
     useState<EventStatus>("draft");
@@ -437,6 +438,7 @@ export default function NewEventPage() {
           fee: feeNumber,
           payment_management_required: feeNumber > 0 || paymentManagementRequired,
           payment_note: paymentNote.trim() || null,
+          is_ubm: isUbm,
           status,
         })
         .select("id")
@@ -787,6 +789,14 @@ export default function NewEventPage() {
                 <FormField label="参加費の備考">
                   <textarea value={paymentNote} onChange={(event) => setPaymentNote(event.target.value)} placeholder="例：ご自分の飲食代のみ／会場費は割り勘" rows={3} disabled={saving} className={inputClass} />
                 </FormField>
+              </div>
+
+              <div className="rounded-2xl border border-violet-200 bg-violet-50 p-5">
+                <label className="flex items-center gap-3 text-sm font-bold text-violet-950">
+                  <input type="checkbox" checked={isUbm} onChange={(event) => setIsUbm(event.target.checked)} disabled={saving} />
+                  UBM対象イベント
+                </label>
+                <p className="mt-2 text-xs text-violet-700">UBM権限のユーザーに表示・申込みを許可します。</p>
               </div>
 
               <FormField label="公開状態">

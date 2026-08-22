@@ -20,6 +20,7 @@ type EventRow = {
   capacity: number | null;
   fee: number;
   image_url: string | null;
+  is_ubm: boolean;
 };
 
 export default function AdminEventsPage() {
@@ -76,7 +77,8 @@ export default function AdminEventsPage() {
         status,
         capacity,
         fee,
-        image_url
+        image_url,
+        is_ubm
       `)
       .order("start_at", {
         ascending: false,
@@ -194,6 +196,9 @@ export default function AdminEventsPage() {
                       <span className="rounded-full bg-neutral-100 px-3 py-1 text-xs font-bold text-neutral-600">
                         {formatFee(event.fee)}
                       </span>
+                      {event.is_ubm && (
+                        <span className="rounded-full bg-violet-100 px-3 py-1 text-xs font-bold text-violet-700">UBM</span>
+                      )}
                     </div>
 
                     <h2 className="mt-4 text-lg font-bold text-neutral-900">
