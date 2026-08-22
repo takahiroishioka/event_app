@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import ImageCarousel, { type CarouselImage } from "@/components/ImageCarousel";
 import SiteHeader from "@/components/SiteHeader";
@@ -43,8 +43,17 @@ export default function Home() {
   const [settings, setSettings] = useState<TopPageSettings>(defaultSettings);
   const [banners, setBanners] = useState<Banner[]>([]);
   const [footerSettings, setFooterSettings] = useState(defaultFooterSettings);
+  const [selectedMonth, setSelectedMonth] = useState("");
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
+
+  const availableMonths = useMemo(
+    () => [...new Set(events.flatMap((event) => event.start_at ? [toMonthKey(event.start_at)] : []))],
+    [events]
+  );
+  const visibleEvents = selectedMonth
+    ? events.filter((event) => event.start_at && toMonthKey(event.start_at) === selectedMonth)
+    : events;
 
   useEffect(() => {
     let active = true;
@@ -156,9 +165,28 @@ export default function Home() {
             <h2 className="mt-2 text-3xl font-black text-neutral-900">イベント一覧</h2>
           </div>
           {!loading && !errorMessage && (
-            <p className="text-sm text-neutral-500">{events.length}件</p>
+            <p className="text-sm text-neutral-500">{visibleEvents.length}件</p>
           )}
         </div>
+
+        {!loading && !errorMessage && availableMonths.length > 0 && (
+          <div className="mb-7 rounded-2xl bg-white p-4 shadow-sm sm:flex sm:items-center sm:gap-4 sm:px-5">
+            <label htmlFor="event-month" className="block shrink-0 text-sm font-bold text-neutral-800">
+              開催月で検索
+            </label>
+            <select
+              id="event-month"
+              value={selectedMonth}
+              onChange={(event) => setSelectedMonth(event.target.value)}
+              className="mt-2 w-full rounded-xl border border-neutral-300 bg-white px-4 py-3 text-sm text-neutral-900 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 sm:mt-0 sm:max-w-xs"
+            >
+              <option value="">すべての月</option>
+              {availableMonths.map((month) => (
+                <option key={month} value={month}>{formatMonth(month)}</option>
+              ))}
+            </select>
+          </div>
+        )}
 
         {loading && (
           <div className="rounded-3xl bg-white p-10 text-center text-neutral-500 shadow-sm">
@@ -179,9 +207,15 @@ export default function Home() {
           </div>
         )}
 
-        {!loading && !errorMessage && events.length > 0 && (
+        {!loading && !errorMessage && events.length > 0 && visibleEvents.length === 0 && (
+          <div className="rounded-3xl bg-white p-10 text-center shadow-sm">
+            <p className="font-bold text-neutral-800">選択した月に開催予定のイベントはありません。</p>
+          </div>
+        )}
+
+        {!loading && !errorMessage && visibleEvents.length > 0 && (
           <div className="grid gap-6 md:grid-cols-2">
-            {events.map((event) => (
+            {visibleEvents.map((event) => (
               <Link key={event.id} href={`/events/${event.id}`} className="block overflow-hidden rounded-2xl bg-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
                 <div className="grid grid-cols-[55%_45%]">
                   <div className="aspect-video overflow-hidden bg-neutral-200">
@@ -246,4 +280,14 @@ function formatFee(fee: number) {
 
 function isPastEvent(event: EventRow) {
   return event.start_at ? new Date(event.start_at).getTime() < Date.now() : false;
+}
+
+function toMonthKey(value: string) {
+  const date = new Date(value);
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+}
+
+function formatMonth(value: string) {
+  const [year, month] = value.split("-");
+  return `${year}年${Number(month)}月`;
 }
