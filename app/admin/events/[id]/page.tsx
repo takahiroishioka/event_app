@@ -129,6 +129,8 @@ export default function AdminEventDetailPage() {
     useState(false);
 
   const [canEditEvent, setCanEditEvent] = useState(false);
+  const [isGlobalAdmin, setIsGlobalAdmin] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   const loadPage = useCallback(async () => {
     setLoading(true);
@@ -165,6 +167,8 @@ export default function AdminEventDetailPage() {
 
     const { data: editAccess } = await supabase.rpc("can_manage_event", { p_event_id: eventId, p_edit_required: true });
     setCanEditEvent(Boolean(editAccess));
+    const { data: globalAdminAccess } = await supabase.rpc("is_global_admin");
+    setIsGlobalAdmin(Boolean(globalAdminAccess));
 
     /*
      * イベント情報を取得
@@ -870,6 +874,35 @@ function sanitizeFileName(
     setSaving(false);
   }
 
+  async function handleDelete() {
+    if (!event || !isGlobalAdmin) return;
+
+    const confirmed = window.confirm(
+      `「${event.title}」を削除しますか？\n参加情報や回答などの関連データも影響を受けます。この操作は取り消せません。`
+    );
+    if (!confirmed) return;
+
+    setDeleting(true);
+    setMessage("");
+    setIsError(false);
+
+    const { error } = await supabase
+      .from("events")
+      .delete()
+      .eq("id", event.id);
+
+    if (error) {
+      console.error("イベント削除エラー:", error);
+      setIsError(true);
+      setMessage(`イベントを削除できませんでした：${error.message}`);
+      setDeleting(false);
+      return;
+    }
+
+    router.replace("/admin/events");
+    router.refresh();
+  }
+
   const activeRegistrations =
     useMemo(() => {
       return registrations.filter(
@@ -1288,6 +1321,16 @@ function sanitizeFileName(
                   : "変更を保存"}
             </button> : <p className="mt-8 rounded-xl bg-neutral-100 p-4 text-center text-sm font-bold text-neutral-600">閲覧権限のため変更は保存できません。</p>}
           </form>
+
+          {isGlobalAdmin && (
+            <section className="mt-8 rounded-3xl border border-red-200 bg-red-50 p-6 sm:p-8">
+              <h2 className="text-lg font-bold text-red-900">イベントの削除</h2>
+              <p className="mt-2 text-sm leading-6 text-red-700">削除したイベントは元に戻せません。必要な場合は、削除ではなく公開状態を「中止」に変更してください。</p>
+              <button type="button" onClick={() => void handleDelete()} disabled={deleting || saving || uploadingImage} className="mt-5 rounded-xl bg-red-600 px-5 py-3 text-sm font-bold text-white transition hover:bg-red-700 disabled:bg-neutral-400">
+                {deleting ? "削除しています..." : "このイベントを削除"}
+              </button>
+            </section>
+          )}
           </div>
         )}
 

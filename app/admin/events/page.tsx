@@ -174,9 +174,10 @@ export default function AdminEventsPage() {
         ) : (
           <div className="mt-6 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             {events.map((event) => (
-              <article
+              <Link
                 key={event.id}
-                className="flex overflow-hidden rounded-3xl bg-white shadow-sm"
+                href={`/admin/events/${event.id}`}
+                className="group flex overflow-hidden rounded-3xl bg-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
               >
                 <div className="flex w-full flex-col">
                   <div className="aspect-video overflow-hidden bg-neutral-200">
@@ -214,15 +215,14 @@ export default function AdminEventsPage() {
                         {event.location || "会場未定"}
                       </p>
                     </div>
-                    <Link
-                      href={`/admin/events/${event.id}`}
-                      className="mt-5 block rounded-xl border border-neutral-300 bg-white px-5 py-3 text-center text-sm font-bold text-neutral-800 transition hover:bg-neutral-50"
+                    <span
+                      className="mt-5 block rounded-xl border border-neutral-300 bg-white px-5 py-3 text-center text-sm font-bold text-neutral-800 transition group-hover:bg-neutral-50"
                     >
                       管理・回答を見る
-                    </Link>
+                    </span>
                   </div>
                 </div>
-              </article>
+              </Link>
             ))}
           </div>
         )}
