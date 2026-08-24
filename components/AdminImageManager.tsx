@@ -102,6 +102,34 @@ export default function AdminImageManager({
     setSaving(false);
   }
 
+  async function replaceImage(id: string, inputEvent: ChangeEvent<HTMLInputElement>) {
+    const file = inputEvent.target.files?.[0];
+    inputEvent.target.value = "";
+    if (!file) return;
+    if (!file.type.startsWith("image/") || file.size > 5 * 1024 * 1024) {
+      setMessage("5MB以下の画像ファイルを選択してください。");
+      return;
+    }
+
+    setSaving(true);
+    setMessage("");
+    const extension = file.name.split(".").pop()?.toLowerCase() || "jpg";
+    const ownerId = eventId ?? bannerId ?? "top";
+    const path = `site-images/${placement}/${ownerId}/${Date.now()}-${crypto.randomUUID()}.${extension}`;
+    const { error: uploadError } = await supabase.storage.from("event-images").upload(path, file, { contentType: file.type, upsert: false });
+    if (uploadError) {
+      setMessage(`画像をアップロードできませんでした：${uploadError.message}`);
+      setSaving(false);
+      return;
+    }
+
+    const { data: urlData } = supabase.storage.from("event-images").getPublicUrl(path);
+    const { error } = await supabase.from("site_images").update({ image_url: urlData.publicUrl }).eq("id", id);
+    setMessage(error ? `画像を変更できませんでした：${error.message}` : "画像を変更しました。");
+    if (!error) await loadImages();
+    setSaving(false);
+  }
+
   async function deleteImage(id: string) {
     if (!window.confirm("この画像を一覧から削除しますか？")) return;
     setSaving(true);
@@ -130,6 +158,15 @@ export default function AdminImageManager({
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={image.image_url} alt={image.alt_text || ""} className="aspect-video w-full object-cover" />
             <div className="p-4">
+              <label className="block text-sm font-bold">画像の説明（任意）
+                <input
+                  value={image.alt_text ?? ""}
+                  disabled={saving || readOnly}
+                  onChange={(event) => setImages((current) => current.map((row) => row.id === image.id ? { ...row, alt_text: event.target.value } : row))}
+                  onBlur={(event) => void updateImage(image.id, { alt_text: event.target.value.trim() || null })}
+                  className="mt-2 w-full rounded-lg border border-neutral-300 px-3 py-2 font-normal text-neutral-900"
+                />
+              </label>
               <div className="flex items-center gap-3">
                 <label className="flex items-center gap-2 text-sm">
                   <input type="checkbox" checked={image.is_active} disabled={saving || readOnly} onChange={(event) => updateImage(image.id, { is_active: event.target.checked })} /> 公開
@@ -151,6 +188,10 @@ export default function AdminImageManager({
                   />
                 </label>
               )}
+              {!readOnly && <label className="mt-4 inline-flex cursor-pointer rounded-lg border border-blue-300 px-3 py-2 text-sm font-bold text-blue-700">
+                {saving ? "処理中…" : "画像を変更"}
+                <input type="file" accept="image/jpeg,image/png,image/webp,image/gif" disabled={saving} onChange={(event) => void replaceImage(image.id, event)} className="hidden" />
+              </label>}
               {!readOnly && <button type="button" disabled={saving} onClick={() => deleteImage(image.id)} className="mt-4 text-sm font-bold text-red-600 underline">削除</button>}
             </div>
           </article>
