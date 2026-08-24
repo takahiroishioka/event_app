@@ -38,6 +38,15 @@ type UserEventRow = {
   events: EventData | EventData[] | null;
 };
 
+type AssignedTask = {
+  id: string;
+  event_id: string;
+  event_title: string;
+  title: string;
+  due_at: string | null;
+  completed_at: string | null;
+};
+
 export default function MyPage() {
   const router = useRouter();
 
@@ -50,6 +59,7 @@ export default function MyPage() {
   const [joinedEvents, setJoinedEvents] = useState<EventData[]>([]);
   const [allEvents, setAllEvents] = useState<EventData[]>([]);
   const [pastEvents, setPastEvents] = useState<EventData[]>([]);
+  const [assignedTasks, setAssignedTasks] = useState<AssignedTask[]>([]);
   const [showPastEvents, setShowPastEvents] = useState(false);
   const [banners, setBanners] = useState<Banner[]>([]);
   const [footerSettings, setFooterSettings] = useState(defaultFooterSettings);
@@ -95,6 +105,31 @@ export default function MyPage() {
         "";
 
       setUserName(displayName);
+
+      const { data: taskRows, error: taskError } = await supabase
+        .from("event_tasks")
+        .select("id, event_id, title, due_at, completed_at")
+        .eq("assignee_user_id", user.id)
+        .order("completed_at", { ascending: true, nullsFirst: true })
+        .order("due_at", { ascending: true, nullsFirst: false });
+
+      if (taskError) {
+        console.error("担当タスク取得エラー:", taskError);
+      } else {
+        const taskEventIds = [...new Set((taskRows ?? []).map((task) => task.event_id))];
+        const { data: taskEvents, error: taskEventError } = taskEventIds.length
+          ? await supabase.from("events").select("id, title").in("id", taskEventIds)
+          : { data: [], error: null };
+        if (taskEventError) {
+          console.error("タスクのイベント取得エラー:", taskEventError);
+        } else {
+          const taskEventNames = new Map((taskEvents ?? []).map((taskEvent) => [taskEvent.id, taskEvent.title]));
+          setAssignedTasks((taskRows ?? []).map((task) => ({
+            ...task,
+            event_title: taskEventNames.get(task.event_id) ?? "イベント名未取得",
+          })));
+        }
+      }
 
       const { data: ubmAccess, error: ubmAccessError } = await supabase.rpc("is_ubm_restricted_user");
       if (ubmAccessError) console.error("UBM権限取得エラー:", ubmAccessError);
@@ -364,6 +399,30 @@ export default function MyPage() {
           <p className="mb-6 rounded-2xl bg-red-50 px-5 py-4 text-sm text-red-700">
             {errorMessage}
           </p>
+        )}
+
+        {assignedTasks.length > 0 && (
+          <section className="mb-10">
+            <div className="mb-5 flex items-end justify-between gap-4">
+              <div>
+                <p className="text-sm font-bold text-violet-600">MY TASKS</p>
+                <h2 className="mt-1 text-2xl font-bold text-neutral-900">担当タスク</h2>
+              </div>
+              <span className="text-sm text-neutral-500">{assignedTasks.filter((task) => !task.completed_at).length}件未完了</span>
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              {assignedTasks.map((task) => (
+                <Link key={task.id} href={`/events/${task.event_id}`} className="block rounded-2xl border border-violet-100 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-violet-300 hover:shadow-md">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className={`rounded-full px-3 py-1 text-xs font-bold ${task.completed_at ? "bg-green-100 text-green-700" : "bg-orange-100 text-orange-700"}`}>{task.completed_at ? "完了" : "未完了"}</span>
+                    {task.due_at && <span className="text-xs text-neutral-500">締切：{formatDate(task.due_at)}</span>}
+                  </div>
+                  <h3 className={`mt-3 text-lg font-bold ${task.completed_at ? "text-neutral-500 line-through" : "text-neutral-900"}`}>{task.title}</h3>
+                  <p className="mt-2 text-sm text-neutral-500">{task.event_title}</p>
+                </Link>
+              ))}
+            </div>
+          </section>
         )}
 
         <section className="mb-10">
