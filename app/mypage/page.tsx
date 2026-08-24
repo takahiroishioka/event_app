@@ -552,8 +552,7 @@ function formatFee(fee: number) {
 }
 
 function isPastEvent(event: EventData) {
-  const boundary = event.end_at ?? event.start_at;
-  return boundary ? new Date(boundary).getTime() < Date.now() : false;
+  return event.start_at ? new Date(event.start_at).getTime() < Date.now() : false;
 }
 
 function compareEventDates(a: EventData, b: EventData) {
