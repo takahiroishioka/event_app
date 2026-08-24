@@ -124,9 +124,21 @@ export default function AdminImageManager({
     }
 
     const { data: urlData } = supabase.storage.from("event-images").getPublicUrl(path);
-    const { error } = await supabase.from("site_images").update({ image_url: urlData.publicUrl }).eq("id", id);
-    setMessage(error ? `画像を変更できませんでした：${error.message}` : "画像を変更しました。");
-    if (!error) await loadImages();
+    const { data: updatedImage, error } = await supabase
+      .from("site_images")
+      .update({ image_url: urlData.publicUrl, updated_at: new Date().toISOString() })
+      .eq("id", id)
+      .select("id, image_url, alt_text, sort_order, is_active, link_url")
+      .maybeSingle();
+
+    if (error) {
+      setMessage(`画像を変更できませんでした：${error.message}`);
+    } else if (!updatedImage) {
+      setMessage("画像を変更できませんでした。この画像の編集権限を確認してください。");
+    } else {
+      setImages((current) => current.map((image) => image.id === id ? updatedImage as SiteImage : image));
+      setMessage("画像を変更しました。");
+    }
     setSaving(false);
   }
 
