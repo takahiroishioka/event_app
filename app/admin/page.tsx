@@ -255,16 +255,23 @@ export default function AdminPage() {
 
             <AdminMenuCard
               href="/admin/participants"
-              title="参加者一覧"
+              title="参加者管理"
               description="すべてのイベントの参加者名、イベント名、支払い状況をまとめて確認します。"
-              actionLabel="参加者を確認"
+              actionLabel="参加者を管理"
             />
 
             <AdminMenuCard
-              href="/admin/ubm"
-              title="UBM権限管理"
-              description="ユーザーにUBM限定権限を付与、または解除します。"
-              actionLabel="UBM権限を管理"
+              href="/admin/cancellations"
+              title="キャンセル申請"
+              description="参加者から届いたキャンセル申請を確認し、承認します。"
+              actionLabel="申請を確認"
+            />
+
+            <AdminMenuCard
+              href="/admin/users"
+              title="ユーザー一覧"
+              description="全ユーザーの権限を確認し、UBM権限を切り替えます。"
+              actionLabel="ユーザーを確認"
             />
           </div>
         </section>
@@ -282,60 +289,16 @@ export default function AdminPage() {
               actionLabel="トップページを管理"
             />
             <AdminMenuCard
-              href="/admin/banners"
-              title="バナー管理"
-              description="TOPページとマイページ下部のリンク付きカルーセルバナーを管理します。"
-              actionLabel="バナーを管理"
-            />
-            <AdminMenuCard
               href="/admin/footer"
               title="フッター管理"
               description="TOPページ下部の表示名とInstagram・X・YouTubeのリンクを管理します。"
               actionLabel="フッターを管理"
             />
-          </div>
-        </section>
-
-        <section className="mt-8">
-          <h2 className="px-1 text-lg font-bold text-neutral-900">
-            参加者対応
-          </h2>
-
-          <div className="mt-4 grid gap-4 sm:grid-cols-2">
             <AdminMenuCard
-              href="/admin/events"
-              title="参加者・回答確認"
-              description="イベントを選び、参加状況と質問への回答を確認します。"
-              actionLabel="回答を確認"
-            />
-
-            <AdminMenuCard
-              href="/admin/cancellations"
-              title="キャンセル申請"
-              description="参加者から届いたキャンセル申請を確認し、承認します。"
-              actionLabel="申請を確認"
-            />
-          </div>
-        </section>
-
-        <section className="mt-8">
-          <h2 className="px-1 text-lg font-bold text-neutral-900">
-            コミュニケーション
-          </h2>
-
-          <div className="mt-4 grid gap-4 sm:grid-cols-2">
-            <AdminMenuCard
-              href="/admin/chats"
-              title="参加者チャット"
-              description="参加者から届いたメッセージを確認して返信します。"
-              actionLabel="チャットを開く"
-            />
-
-            <AdminMenuCard
-              href="/admin/announcements"
-              title="お知らせ管理"
-              description="参加者に表示するお知らせを作成・編集します。"
-              actionLabel="お知らせを管理"
+              href="/admin/banners"
+              title="バナー管理"
+              description="TOPページとマイページ下部のリンク付きカルーセルバナーを管理します。"
+              actionLabel="バナーを管理"
             />
           </div>
         </section>

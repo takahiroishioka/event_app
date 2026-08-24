@@ -338,6 +338,8 @@ export default function MyPage() {
     loadMyPage();
   }, [router]);
 
+  const nearestTask = assignedTasks.find((task) => !task.completed_at) ?? null;
+
   if (loading) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-neutral-100">
@@ -408,20 +410,18 @@ export default function MyPage() {
                 <p className="text-sm font-bold text-violet-600">MY TASKS</p>
                 <h2 className="mt-1 text-2xl font-bold text-neutral-900">担当タスク</h2>
               </div>
-              <span className="text-sm text-neutral-500">{assignedTasks.filter((task) => !task.completed_at).length}件未完了</span>
+              <Link href="/mypage/tasks" className="text-sm font-bold text-violet-600 underline underline-offset-4">タスク一覧を見る →</Link>
             </div>
-            <div className="grid gap-4 sm:grid-cols-2">
-              {assignedTasks.map((task) => (
-                <Link key={task.id} href={`/events/${task.event_id}`} className="block rounded-2xl border border-violet-100 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-violet-300 hover:shadow-md">
+            {nearestTask ? (
+                <Link href={`/events/${nearestTask.event_id}`} className="block rounded-2xl border border-violet-100 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-violet-300 hover:shadow-md">
                   <div className="flex flex-wrap items-center gap-2">
-                    <span className={`rounded-full px-3 py-1 text-xs font-bold ${task.completed_at ? "bg-green-100 text-green-700" : "bg-orange-100 text-orange-700"}`}>{task.completed_at ? "完了" : "未完了"}</span>
-                    {task.due_at && <span className="text-xs text-neutral-500">締切：{formatDate(task.due_at)}</span>}
+                    <span className="rounded-full bg-orange-100 px-3 py-1 text-xs font-bold text-orange-700">次のタスク</span>
+                    {nearestTask.due_at && <span className="text-xs text-neutral-500">締切：{formatDate(nearestTask.due_at)}</span>}
                   </div>
-                  <h3 className={`mt-3 text-lg font-bold ${task.completed_at ? "text-neutral-500 line-through" : "text-neutral-900"}`}>{task.title}</h3>
-                  <p className="mt-2 text-sm text-neutral-500">{task.event_title}</p>
+                  <h3 className="mt-3 text-lg font-bold text-neutral-900">{nearestTask.title}</h3>
+                  <p className="mt-2 text-sm text-neutral-500">{nearestTask.event_title}</p>
                 </Link>
-              ))}
-            </div>
+            ) : <p className="rounded-2xl bg-white p-6 text-center text-sm text-neutral-500 shadow-sm">未完了のタスクはありません。</p>}
           </section>
         )}
 

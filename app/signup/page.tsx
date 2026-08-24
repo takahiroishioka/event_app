@@ -5,6 +5,10 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
 export default function SignupPage() {
+  return <SignupForm />;
+}
+
+export function SignupForm({ ubm = false }: { ubm?: boolean }) {
   const router = useRouter();
   const supabase = createClient();
 
@@ -58,8 +62,9 @@ export default function SignupPage() {
       options: {
         data: {
           name: trimmedName,
+          signup_type: ubm ? "ubm" : "general",
         },
-        emailRedirectTo: `${window.location.origin}/mypage`,
+        emailRedirectTo: `${window.location.origin}/auth/callback?next=/mypage${ubm ? "&signup=ubm" : ""}`,
       },
     });
 
@@ -75,6 +80,15 @@ export default function SignupPage() {
       登録時点でsessionが作成されます。
     */
     if (data.session) {
+      if (ubm) {
+        const { error: roleError } = await supabase.rpc("register_current_user_as_ubm");
+        if (roleError) {
+          setIsError(true);
+          setMessage(`UBM権限を登録できませんでした：${roleError.message}`);
+          setLoading(false);
+          return;
+        }
+      }
       router.push("/mypage");
       router.refresh();
       return;
@@ -99,7 +113,7 @@ export default function SignupPage() {
       provider: "google",
       options: {
         redirectTo:
-          `${window.location.origin}/auth/callback?next=/mypage`,
+          `${window.location.origin}/auth/callback?next=/mypage${ubm ? "&signup=ubm" : ""}`,
       },
     });
 
@@ -119,11 +133,11 @@ export default function SignupPage() {
           </p>
 
           <h1 className="text-3xl font-bold text-neutral-900">
-            新規登録
+            {ubm ? "UBM会員新規登録" : "新規登録"}
           </h1>
 
           <p className="mt-3 text-sm leading-6 text-neutral-500">
-            アカウントを作成してイベントに参加しましょう
+            {ubm ? "UBM対象イベント専用のアカウントを作成します" : "アカウントを作成してイベントに参加しましょう"}
           </p>
         </div>
 
