@@ -973,6 +973,12 @@ function sanitizeFileName(
           <p className="mt-3 text-sm text-neutral-500">
             イベント情報の修正と、参加申請の回答確認ができます。
           </p>
+
+          {canEditEvent && (
+            <Link href={`/admin/events/${eventId}/tasks`} className="mt-5 inline-block rounded-xl bg-violet-600 px-5 py-3 text-sm font-bold text-white transition hover:bg-violet-700">
+              タスクを登録・管理
+            </Link>
+          )}
         </header>
 
         <div className="mt-6 grid grid-cols-2 rounded-2xl bg-white p-1 shadow-sm">

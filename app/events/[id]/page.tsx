@@ -67,6 +67,16 @@ type OptionRow = {
   sort_order: number;
 };
 
+type EventTask = {
+  id: string;
+  title: string;
+  details: string | null;
+  due_at: string | null;
+  assignee_user_id: string | null;
+  completion_message: string | null;
+  completed_at: string | null;
+};
+
 export default function EventDetailPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
@@ -87,6 +97,13 @@ export default function EventDetailPage() {
 
   const [isLoggedIn, setIsLoggedIn] =
     useState(false);
+
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [isGlobalAdmin, setIsGlobalAdmin] = useState(false);
+  const [eventTasks, setEventTasks] = useState<EventTask[]>([]);
+  const [selectedTask, setSelectedTask] = useState<EventTask | null>(null);
+  const [showCompletionMessage, setShowCompletionMessage] = useState(false);
+  const [completingTask, setCompletingTask] = useState(false);
 
   const [refundMethod, setRefundMethod] = useState<"bank" | "hand" | "">("");
 
@@ -129,6 +146,7 @@ export default function EventDetailPage() {
       } = await supabase.auth.getUser();
 
       setIsLoggedIn(Boolean(user));
+      setCurrentUserId(user?.id ?? null);
 
       if (userError) {
         console.error(
@@ -183,6 +201,29 @@ export default function EventDetailPage() {
       }
 
       setEvent(eventData);
+
+      if (user) {
+        const [manageResult, adminResult] = await Promise.all([
+          supabase.rpc("can_manage_event", { p_event_id: eventId, p_edit_required: false }),
+          supabase.rpc("is_global_admin"),
+        ]);
+        setIsGlobalAdmin(Boolean(adminResult.data));
+        if (manageResult.data) {
+          const { data: taskRows, error: taskError } = await supabase
+            .from("event_tasks")
+            .select("id, title, details, due_at, assignee_user_id, completion_message, completed_at")
+            .eq("event_id", eventId)
+            .order("completed_at", { ascending: true, nullsFirst: true })
+            .order("due_at", { ascending: true, nullsFirst: false });
+          if (taskError) console.error("イベントタスク取得エラー:", taskError);
+          else setEventTasks((taskRows ?? []) as EventTask[]);
+        } else {
+          setEventTasks([]);
+        }
+      } else {
+        setIsGlobalAdmin(false);
+        setEventTasks([]);
+      }
 
       const { data: imageData, error: imageError } = await supabase
         .from("site_images")
@@ -894,6 +935,34 @@ export default function EventDetailPage() {
     setProcessing(false);
   }
 
+  function openTask(task: EventTask) {
+    setSelectedTask(task);
+    setShowCompletionMessage(false);
+  }
+
+  async function completeTask() {
+    if (!selectedTask) return;
+    setCompletingTask(true);
+    const { error } = await supabase.rpc("complete_event_task", { p_task_id: selectedTask.id });
+    if (error) {
+      setIsError(true);
+      setMessage(`タスクを完了できませんでした：${error.message}`);
+      setCompletingTask(false);
+      return;
+    }
+    const completed = { ...selectedTask, completed_at: new Date().toISOString() };
+    setSelectedTask(completed);
+    setEventTasks((current) => current.map((task) => task.id === completed.id ? completed : task));
+    setShowCompletionMessage(true);
+    setCompletingTask(false);
+  }
+
+  function openNextTask() {
+    if (!selectedTask) return;
+    const nextTask = eventTasks.find((task) => !task.completed_at && task.id !== selectedTask.id);
+    if (nextTask) openTask(nextTask);
+  }
+
   if (loading) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-neutral-100">
@@ -1030,6 +1099,20 @@ export default function EventDetailPage() {
           </div>
         </article>
 
+        {eventTasks.length > 0 && (
+          <section className="mt-6 rounded-3xl border border-violet-200 bg-violet-50 p-6 shadow-sm sm:p-8">
+            <p className="text-sm font-bold text-violet-600">ADMIN TASKS</p>
+            <h2 className="mt-2 text-xl font-bold text-neutral-900">イベントタスク</h2>
+            <div className="mt-5 grid gap-3 sm:grid-cols-2">
+              {eventTasks.map((task) => (
+                <button key={task.id} type="button" onClick={() => openTask(task)} className={`rounded-xl border bg-white px-5 py-4 text-left font-bold transition hover:border-violet-400 hover:bg-violet-50 ${task.completed_at ? "border-green-200 text-neutral-500 line-through" : "border-violet-200 text-neutral-900"}`}>
+                  {task.title}
+                </button>
+              ))}
+            </div>
+          </section>
+        )}
+
         {canManagePayment && (
           <section className="mt-6 rounded-3xl bg-white p-6 shadow-sm sm:p-8">
             <p className="text-sm font-bold text-blue-600">PAYMENT</p>
@@ -1158,6 +1241,29 @@ export default function EventDetailPage() {
           >
             {message}
           </p>
+        )}
+
+        {selectedTask && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4" role="dialog" aria-modal="true" aria-labelledby="task-modal-title" onMouseDown={(event) => { if (event.target === event.currentTarget) setSelectedTask(null); }}>
+            <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-3xl bg-white p-6 shadow-2xl sm:p-8">
+              {showCompletionMessage ? (
+                <>
+                  <p className="text-sm font-bold text-green-600">TASK COMPLETE</p>
+                  <h2 id="task-modal-title" className="mt-2 text-2xl font-bold text-neutral-900">タスク完了</h2>
+                  <p className="mt-6 whitespace-pre-wrap rounded-2xl bg-green-50 p-5 text-sm leading-7 text-green-800">{selectedTask.completion_message || "お疲れさまでした。次のタスクを確認してください。"}</p>
+                  {eventTasks.some((task) => !task.completed_at && task.id !== selectedTask.id) && <button type="button" onClick={openNextTask} className="mt-6 w-full rounded-xl bg-violet-600 px-5 py-4 font-bold text-white">次のタスクを確認</button>}
+                </>
+              ) : (
+                <>
+                  <div className="flex items-start justify-between gap-4"><div><p className="text-sm font-bold text-violet-600">TASK DETAIL</p><h2 id="task-modal-title" className="mt-2 text-2xl font-bold text-neutral-900">{selectedTask.title}</h2></div><button type="button" onClick={() => setSelectedTask(null)} aria-label="閉じる" className="text-2xl text-neutral-400">×</button></div>
+                  <p className="mt-6 whitespace-pre-wrap text-sm leading-7 text-neutral-600">{selectedTask.details || "詳細は登録されていません。"}</p>
+                  <p className="mt-5 text-sm text-neutral-500">締め切り：{selectedTask.due_at ? formatDate(selectedTask.due_at) : "未設定"}</p>
+                  {selectedTask.completed_at ? <p className="mt-6 rounded-xl bg-green-50 p-4 text-center font-bold text-green-700">完了済み</p> : (isGlobalAdmin || selectedTask.assignee_user_id === currentUserId) ? <button type="button" onClick={() => void completeTask()} disabled={completingTask} className="mt-6 w-full rounded-xl bg-green-600 px-5 py-4 font-bold text-white disabled:bg-neutral-400">{completingTask ? "完了処理中..." : "完了済みにする"}</button> : <p className="mt-6 rounded-xl bg-neutral-100 p-4 text-center text-sm font-bold text-neutral-600">担当者のみ完了にできます。</p>}
+                </>
+              )}
+              <button type="button" onClick={() => setSelectedTask(null)} className="mt-4 w-full px-5 py-3 text-sm font-bold text-neutral-500">閉じる</button>
+            </div>
+          </div>
         )}
       </div>
     </main>
