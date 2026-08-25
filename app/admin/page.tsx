@@ -8,6 +8,7 @@ import {
 } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import AdminShareMenu from "@/components/AdminShareMenu";
 
 const supabase = createClient();
 
@@ -302,6 +303,8 @@ export default function AdminPage() {
             />
           </div>
         </section>
+
+        <AdminShareMenu />
       </div>
     </main>
   );
