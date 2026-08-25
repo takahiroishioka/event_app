@@ -8,6 +8,7 @@ import { createClient } from "@/lib/supabase/client";
 import SiteHeader from "@/components/SiteHeader";
 import BannerSection, { type Banner } from "@/components/BannerSection";
 import SocialFooter from "@/components/SocialFooter";
+import { attachEventPreviewImages } from "@/lib/event-images";
 
 const supabase = createClient();
 
@@ -205,7 +206,6 @@ export default function MyPage() {
             id,
             title,
             description,
-            image_url,
             start_at,
             end_at,
             location,
@@ -245,9 +245,6 @@ export default function MyPage() {
             return [row.events];
           }) ?? [];
 
-      const upcomingJoinedEvents = formattedJoinedEvents.filter((event) => !isPastEvent(event)).sort(compareEventDates);
-      setJoinedEvents(upcomingJoinedEvents);
-
       /*
        * 公開中のイベントを取得
        */
@@ -260,7 +257,6 @@ export default function MyPage() {
           id,
           title,
           description,
-          image_url,
           start_at,
           end_at,
           location,
@@ -284,17 +280,36 @@ export default function MyPage() {
         );
       }
 
-      const joinedEventIds = new Set(formattedJoinedEvents.map((event) => event.id));
-      const publishedEventRows = (publishedEvents ?? []) as EventData[];
+      const publishedEventRows = (publishedEvents ?? []) as Omit<EventData, "image_url">[];
+      const allEventIds = [...new Set([...formattedJoinedEvents, ...publishedEventRows].map((event) => event.id))];
+      const { data: eventImageRows, error: eventImageError } = allEventIds.length
+        ? await supabase
+            .from("site_images")
+            .select("event_id, image_url")
+            .eq("placement", "event")
+            .eq("is_active", true)
+            .in("event_id", allEventIds)
+            .order("sort_order")
+            .order("created_at")
+        : { data: [], error: null };
+
+      if (eventImageError) console.error("イベント画像取得エラー:", eventImageError);
+
+      const joinedEventsWithImages = attachEventPreviewImages(formattedJoinedEvents, eventImageRows ?? []);
+      const publishedEventsWithImages = attachEventPreviewImages(publishedEventRows, eventImageRows ?? []);
+      const upcomingJoinedEvents = joinedEventsWithImages.filter((event) => !isPastEvent(event)).sort(compareEventDates);
+      setJoinedEvents(upcomingJoinedEvents);
+
+      const joinedEventIds = new Set(joinedEventsWithImages.map((event) => event.id));
 
       setAllEvents(
-        publishedEventRows
+        publishedEventsWithImages
           .filter((event) => !joinedEventIds.has(event.id) && !isPastEvent(event))
           .sort(compareEventDates)
       );
 
       const pastEventMap = new Map<string, EventData>();
-      [...formattedJoinedEvents, ...publishedEventRows]
+      [...joinedEventsWithImages, ...publishedEventsWithImages]
         .filter(isPastEvent)
         .forEach((event) => pastEventMap.set(event.id, event));
       setPastEvents([...pastEventMap.values()].sort(compareEventDates));

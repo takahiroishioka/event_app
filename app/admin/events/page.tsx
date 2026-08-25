@@ -8,6 +8,7 @@ import {
 } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { attachEventPreviewImages } from "@/lib/event-images";
 
 const supabase = createClient();
 
@@ -77,7 +78,6 @@ export default function AdminEventsPage() {
         status,
         capacity,
         fee,
-        image_url,
         is_ubm
       `)
       .order("start_at", {
@@ -99,7 +99,21 @@ export default function AdminEventsPage() {
       return;
     }
 
-    setEvents((data ?? []) as EventRow[]);
+    const eventRows = data ?? [];
+    const eventIds = eventRows.map((event) => event.id);
+    const { data: imageRows, error: imageError } = eventIds.length
+      ? await supabase
+          .from("site_images")
+          .select("event_id, image_url")
+          .eq("placement", "event")
+          .eq("is_active", true)
+          .in("event_id", eventIds)
+          .order("sort_order")
+          .order("created_at")
+      : { data: [], error: null };
+
+    if (imageError) console.error("イベント画像取得エラー:", imageError);
+    setEvents(attachEventPreviewImages(eventRows, imageRows ?? []) as EventRow[]);
     setLoading(false);
   }, [router]);
 

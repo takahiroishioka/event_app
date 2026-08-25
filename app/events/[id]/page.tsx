@@ -28,7 +28,6 @@ type EventData = {
   id: string;
   title: string;
   description: string | null;
-  image_url: string | null;
   start_at: string | null;
   end_at: string | null;
   location: string | null;
@@ -164,7 +163,6 @@ export default function EventDetailPage() {
           id,
           title,
           description,
-          image_url,
           start_at,
           end_at,
           location,
@@ -1013,13 +1011,9 @@ export default function EventDetailPage() {
         </div>
 
         <article className="overflow-hidden rounded-3xl bg-white shadow-sm">
-          {(eventImages.length > 0 || event.image_url) && (
+          {eventImages.length > 0 && (
             <ImageCarousel
-              images={
-                eventImages.length > 0
-                  ? eventImages
-                  : [{ id: "legacy", image_url: event.image_url!, alt_text: event.title }]
-              }
+              images={eventImages}
             />
           )}
 

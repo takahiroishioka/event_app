@@ -51,7 +51,6 @@ export default function NewEventPage() {
 
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [imageUrl, setImageUrl] = useState("");
 
   const [startAt, setStartAt] = useState("");
   const [endAt, setEndAt] = useState("");
@@ -330,9 +329,6 @@ export default function NewEventPage() {
     const trimmedDescription =
       description.trim();
 
-    const trimmedImageUrl =
-      imageUrl.trim();
-
     const trimmedLocation =
       location.trim();
 
@@ -415,9 +411,6 @@ export default function NewEventPage() {
 
           description:
             trimmedDescription || null,
-
-          image_url:
-            trimmedImageUrl || null,
 
           start_at: startAt
             ? new Date(
@@ -647,36 +640,6 @@ export default function NewEventPage() {
                   disabled={saving}
                   className={inputClass}
                 />
-              </FormField>
-
-              <FormField label="イベント画像URL">
-                <input
-                  type="url"
-                  value={imageUrl}
-                  onChange={(event) =>
-                    setImageUrl(
-                      event.target.value
-                    )
-                  }
-                  placeholder="https://example.com/event-image.jpg"
-                  disabled={saving}
-                  className={inputClass}
-                />
-
-                <p className="mt-2 text-xs leading-5 text-neutral-500">
-                  現在は画像URLを登録します。後でSupabase Storageへの画像アップロードにも変更できます。
-                </p>
-
-                {imageUrl.trim() && (
-                  <div className="mt-4 overflow-hidden rounded-2xl border border-neutral-200 bg-neutral-100">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={imageUrl}
-                      alt="イベント画像プレビュー"
-                      className="aspect-[16/7] w-full object-cover"
-                    />
-                  </div>
-                )}
               </FormField>
 
               <FormField label="説明">

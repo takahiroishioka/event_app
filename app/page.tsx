@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 import ImageCarousel, { type CarouselImage } from "@/components/ImageCarousel";
 import SiteHeader from "@/components/SiteHeader";
 import BannerSection, { type Banner } from "@/components/BannerSection";
+import { attachEventPreviewImages } from "@/lib/event-images";
 import SocialFooter from "@/components/SocialFooter";
 
 type EventRow = {
@@ -63,7 +64,7 @@ export default function Home() {
       const [eventResult, imageResult, settingsResult, bannerResult, footerResult] = await Promise.all([
         supabase
           .from("events")
-          .select("id, title, description, start_at, location, fee, image_url")
+          .select("id, title, description, start_at, location, fee")
           .eq("status", "published")
           .order("start_at", { ascending: true, nullsFirst: false }),
         supabase
@@ -96,7 +97,21 @@ export default function Home() {
         console.error("イベント一覧取得エラー:", eventResult.error);
         setErrorMessage("イベントを読み込めませんでした。時間をおいて再度お試しください。");
       } else {
-        setEvents(((eventResult.data ?? []) as EventRow[]).filter((event) => !isPastEvent(event)));
+        const eventRows = eventResult.data ?? [];
+        const eventIds = eventRows.map((event) => event.id);
+        const { data: eventImages, error: eventImageError } = eventIds.length
+          ? await supabase
+              .from("site_images")
+              .select("event_id, image_url")
+              .eq("placement", "event")
+              .eq("is_active", true)
+              .in("event_id", eventIds)
+              .order("sort_order")
+              .order("created_at")
+          : { data: [], error: null };
+
+        if (eventImageError) console.error("イベント画像取得エラー:", eventImageError);
+        setEvents(attachEventPreviewImages(eventRows, eventImages ?? []).filter((event) => !isPastEvent(event)) as EventRow[]);
       }
 
       if (!imageResult.error) {

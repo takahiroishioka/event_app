@@ -8,6 +8,7 @@ const supabase = createClient();
 type SiteImage = {
   id: string;
   image_url: string;
+  storage_path: string | null;
   alt_text: string | null;
   sort_order: number;
   is_active: boolean;
@@ -33,7 +34,7 @@ export default function AdminImageManager({
   const loadImages = useCallback(async () => {
     let query = supabase
       .from("site_images")
-      .select("id, image_url, alt_text, sort_order, is_active, link_url")
+      .select("id, image_url, storage_path, alt_text, sort_order, is_active, link_url")
       .eq("placement", placement)
       .order("sort_order");
 
@@ -49,34 +50,6 @@ export default function AdminImageManager({
     const timer = window.setTimeout(() => void loadImages(), 0);
     return () => window.clearTimeout(timer);
   }, [loadImages]);
-
-  async function syncEventPreviewImage() {
-    if (placement !== "event" || !eventId) return null;
-
-    const { data: primaryImage, error: imageError } = await supabase
-      .from("site_images")
-      .select("image_url")
-      .eq("placement", "event")
-      .eq("event_id", eventId)
-      .eq("is_active", true)
-      .order("sort_order")
-      .order("created_at")
-      .limit(1)
-      .maybeSingle();
-
-    if (imageError) return imageError;
-
-    const { data: updatedEvent, error: eventError } = await supabase
-      .from("events")
-      .update({ image_url: primaryImage?.image_url ?? null })
-      .eq("id", eventId)
-      .select("id")
-      .maybeSingle();
-
-    if (eventError) return eventError;
-    if (!updatedEvent) return new Error("イベントカード画像の更新権限がありません。");
-    return null;
-  }
 
   async function uploadImage(inputEvent: ChangeEvent<HTMLInputElement>) {
     const file = inputEvent.target.files?.[0];
@@ -105,6 +78,7 @@ export default function AdminImageManager({
     const { data: urlData } = supabase.storage.from("event-images").getPublicUrl(path);
     const { error } = await supabase.from("site_images").insert({
       image_url: urlData.publicUrl,
+      storage_path: path,
       alt_text: altText.trim() || null,
       placement,
       event_id: eventId,
@@ -114,11 +88,10 @@ export default function AdminImageManager({
       link_url: null,
     });
 
+    if (error) await supabase.storage.from("event-images").remove([path]);
     setMessage(error ? `画像を登録できませんでした：${error.message}` : "画像を登録しました。");
     if (!error) {
       setAltText("");
-      const syncError = await syncEventPreviewImage();
-      if (syncError) setMessage(`画像は登録しましたが、一覧画像を更新できませんでした：${syncError.message}`);
       await loadImages();
     }
     setSaving(false);
@@ -126,13 +99,18 @@ export default function AdminImageManager({
 
   async function updateImage(id: string, values: Partial<SiteImage>) {
     setSaving(true);
-    const { error } = await supabase.from("site_images").update(values).eq("id", id);
-    setMessage(error ? `更新できませんでした：${error.message}` : "画像を更新しました。");
-    if (!error) {
-      const syncError = await syncEventPreviewImage();
-      if (syncError) setMessage(`画像は更新しましたが、一覧画像を更新できませんでした：${syncError.message}`);
-      await loadImages();
-    }
+    const { data: updatedImage, error } = await supabase
+      .from("site_images")
+      .update(values)
+      .eq("id", id)
+      .select("id")
+      .maybeSingle();
+    setMessage(error
+      ? `更新できませんでした：${error.message}`
+      : updatedImage
+        ? "画像を更新しました。"
+        : "更新できませんでした。編集権限を確認してください。");
+    if (updatedImage) await loadImages();
     setSaving(false);
   }
 
@@ -157,24 +135,25 @@ export default function AdminImageManager({
       return;
     }
 
+    const previousImage = images.find((image) => image.id === id);
     const { data: urlData } = supabase.storage.from("event-images").getPublicUrl(path);
     const { data: updatedImage, error } = await supabase
       .from("site_images")
-      .update({ image_url: urlData.publicUrl, updated_at: new Date().toISOString() })
+      .update({ image_url: urlData.publicUrl, storage_path: path, updated_at: new Date().toISOString() })
       .eq("id", id)
-      .select("id, image_url, alt_text, sort_order, is_active, link_url")
+      .select("id, image_url, storage_path, alt_text, sort_order, is_active, link_url")
       .maybeSingle();
 
     if (error) {
+      await supabase.storage.from("event-images").remove([path]);
       setMessage(`画像を変更できませんでした：${error.message}`);
     } else if (!updatedImage) {
+      await supabase.storage.from("event-images").remove([path]);
       setMessage("画像を変更できませんでした。この画像の編集権限を確認してください。");
     } else {
       setImages((current) => current.map((image) => image.id === id ? updatedImage as SiteImage : image));
-      const syncError = await syncEventPreviewImage();
-      setMessage(syncError
-        ? `画像は変更しましたが、一覧画像を更新できませんでした：${syncError.message}`
-        : "画像を変更しました。");
+      if (previousImage?.storage_path) await supabase.storage.from("event-images").remove([previousImage.storage_path]);
+      setMessage("画像を変更しました。");
     }
     setSaving(false);
   }
@@ -182,11 +161,20 @@ export default function AdminImageManager({
   async function deleteImage(id: string) {
     if (!window.confirm("この画像を一覧から削除しますか？")) return;
     setSaving(true);
-    const { error } = await supabase.from("site_images").delete().eq("id", id);
-    setMessage(error ? `削除できませんでした：${error.message}` : "画像を削除しました。");
-    if (!error) {
-      const syncError = await syncEventPreviewImage();
-      if (syncError) setMessage(`画像は削除しましたが、一覧画像を更新できませんでした：${syncError.message}`);
+    const image = images.find((row) => row.id === id);
+    const { data: deletedImage, error } = await supabase
+      .from("site_images")
+      .delete()
+      .eq("id", id)
+      .select("id")
+      .maybeSingle();
+    setMessage(error
+      ? `削除できませんでした：${error.message}`
+      : deletedImage
+        ? "画像を削除しました。"
+        : "削除できませんでした。編集権限を確認してください。");
+    if (deletedImage) {
+      if (image?.storage_path) await supabase.storage.from("event-images").remove([image.storage_path]);
       await loadImages();
     }
     setSaving(false);

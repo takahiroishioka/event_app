@@ -72,9 +72,20 @@ export default function AdminBannersPage() {
   async function deleteBanner(id: string) {
     if (!window.confirm("このバナーと登録画像を削除しますか？")) return;
     setSaving(true);
+    const { data: bannerImages } = await supabase
+      .from("site_images")
+      .select("storage_path")
+      .eq("placement", "banner")
+      .eq("banner_id", id);
     const { error } = await supabase.from("banners").delete().eq("id", id);
     setMessage(error ? `削除できませんでした：${error.message}` : "バナーを削除しました。");
-    if (!error) await loadBanners();
+    if (!error) {
+      const storagePaths = (bannerImages ?? [])
+        .map((image) => image.storage_path)
+        .filter((path): path is string => Boolean(path));
+      if (storagePaths.length) await supabase.storage.from("event-images").remove(storagePaths);
+      await loadBanners();
+    }
     setSaving(false);
   }
 

@@ -28,7 +28,6 @@ type EventData = {
   id: string;
   title: string;
   description: string | null;
-  image_url: string | null;
   start_at: string | null;
   end_at: string | null;
   location: string | null;
@@ -95,8 +94,6 @@ export default function AdminEventDetailPage() {
   const [title, setTitle] = useState("");
   const [description, setDescription] =
     useState("");
-  const [imageUrl, setImageUrl] =
-    useState("");
   const [startAt, setStartAt] =
     useState("");
   const [endAt, setEndAt] =
@@ -117,9 +114,6 @@ export default function AdminEventDetailPage() {
     useState(true);
 
   const [saving, setSaving] =
-    useState(false);
-
-  const [uploadingImage, setUploadingImage] =
     useState(false);
 
   const [message, setMessage] =
@@ -182,7 +176,6 @@ export default function AdminEventDetailPage() {
         id,
         title,
         description,
-        image_url,
         start_at,
         end_at,
         location,
@@ -227,9 +220,6 @@ export default function AdminEventDetailPage() {
     setTitle(typedEvent.title);
     setDescription(
       typedEvent.description ?? ""
-    );
-    setImageUrl(
-      typedEvent.image_url ?? ""
     );
     setStartAt(
       toDateTimeLocal(
@@ -635,83 +625,6 @@ function sanitizeFileName(
   );
 }
 
-  async function handleImageUpload(
-    file: File
-  ) {
-    setMessage("");
-    setIsError(false);
-
-    if (!file.type.startsWith("image/")) {
-      setIsError(true);
-      setMessage(
-        "画像ファイルを選択してください。"
-      );
-      return;
-    }
-
-    const maxFileSize =
-      5 * 1024 * 1024;
-
-    if (file.size > maxFileSize) {
-      setIsError(true);
-      setMessage(
-        "画像は5MB以下にしてください。"
-      );
-      return;
-    }
-
-    setUploadingImage(true);
-
-    const extension =
-      file.name
-        .split(".")
-        .pop()
-        ?.toLowerCase() || "jpg";
-
-    const fileName =
-      `${eventId}/${Date.now()}-${crypto.randomUUID()}.${extension}`;
-
-    const {
-      error: uploadError,
-    } = await supabase.storage
-      .from("event-images")
-      .upload(fileName, file, {
-        cacheControl: "3600",
-        upsert: false,
-        contentType: file.type,
-      });
-
-    if (uploadError) {
-      console.error(
-        "画像アップロードエラー:",
-        uploadError
-      );
-
-      setIsError(true);
-      setMessage(
-        `画像を登録できませんでした：${uploadError.message}`
-      );
-      setUploadingImage(false);
-      return;
-    }
-
-    const {
-      data: publicUrlData,
-    } = supabase.storage
-      .from("event-images")
-      .getPublicUrl(fileName);
-
-    setImageUrl(
-      publicUrlData.publicUrl
-    );
-
-    setMessage(
-      "画像をアップロードしました。最後に「変更を保存」を押してください。"
-    );
-
-    setUploadingImage(false);
-  }
-
   async function handleSave(
     submitEvent: FormEvent<HTMLFormElement>
   ) {
@@ -802,10 +715,6 @@ function sanitizeFileName(
           description.trim() ||
           null,
 
-        image_url:
-          imageUrl.trim() ||
-          null,
-
         start_at: startAt
           ? new Date(
               startAt
@@ -836,7 +745,6 @@ function sanitizeFileName(
         id,
         title,
         description,
-        image_url,
         start_at,
         end_at,
         location,
@@ -886,6 +794,12 @@ function sanitizeFileName(
     setMessage("");
     setIsError(false);
 
+    const { data: eventImages } = await supabase
+      .from("site_images")
+      .select("storage_path")
+      .eq("placement", "event")
+      .eq("event_id", event.id);
+
     const { error } = await supabase
       .from("events")
       .delete()
@@ -898,6 +812,11 @@ function sanitizeFileName(
       setDeleting(false);
       return;
     }
+
+    const storagePaths = (eventImages ?? [])
+      .map((image) => image.storage_path)
+      .filter((path): path is string => Boolean(path));
+    if (storagePaths.length) await supabase.storage.from("event-images").remove(storagePaths);
 
     router.replace("/admin/events");
     router.refresh();
@@ -1056,88 +975,6 @@ function sanitizeFileName(
                   }
                 />
               </FormField>
-
-              <div className="hidden">
-              <FormField label="旧イベント画像">
-                <div className="rounded-2xl border border-dashed border-neutral-300 bg-neutral-50 p-5">
-                  <input
-                    id="event-image"
-                    type="file"
-                    accept="image/jpeg,image/png,image/webp,image/gif"
-                    disabled={
-                      saving ||
-                      uploadingImage
-                    }
-                    onChange={async (
-                      inputEvent
-                    ) => {
-                      const file =
-                        inputEvent.target
-                          .files?.[0];
-
-                      if (!file) {
-                        return;
-                      }
-
-                      await handleImageUpload(
-                        file
-                      );
-
-                      inputEvent.target.value =
-                        "";
-                    }}
-                    className="hidden"
-                  />
-
-                  <label
-                    htmlFor="event-image"
-                    className={`inline-flex cursor-pointer items-center justify-center rounded-xl px-5 py-3 text-sm font-bold text-white transition ${
-                      saving ||
-                      uploadingImage
-                        ? "cursor-not-allowed bg-neutral-400"
-                        : "bg-blue-600 hover:bg-blue-700"
-                    }`}
-                  >
-                    {uploadingImage
-                      ? "画像を登録しています..."
-                      : imageUrl
-                        ? "画像を変更"
-                        : "画像を選択"}
-                  </label>
-
-                  <p className="mt-3 text-xs leading-6 text-neutral-500">
-                    JPG・PNG・WebP・GIFに対応しています。最大5MBです。
-                  </p>
-                </div>
-
-                {imageUrl.trim() && (
-                  <div className="mt-4">
-                    <div className="overflow-hidden rounded-2xl bg-neutral-100">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={imageUrl}
-                        alt="イベント画像"
-                        className="aspect-[16/7] w-full object-cover"
-                      />
-                    </div>
-
-                    <button
-                      type="button"
-                      disabled={
-                        saving ||
-                        uploadingImage
-                      }
-                      onClick={() =>
-                        setImageUrl("")
-                      }
-                      className="mt-3 text-sm font-bold text-red-600 underline underline-offset-4 disabled:text-neutral-400"
-                    >
-                      この画像を外す
-                    </button>
-                  </div>
-                )}
-              </FormField>
-              </div>
 
               <FormField label="説明">
                 <textarea
@@ -1313,18 +1150,10 @@ function sanitizeFileName(
 
             {canEditEvent ? <button
               type="submit"
-              disabled={
-                saving ||
-                uploadingImage ||
-                !title.trim()
-              }
+              disabled={saving || !title.trim()}
               className="mt-8 w-full rounded-xl bg-blue-600 px-5 py-4 font-bold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-neutral-400"
             >
-              {uploadingImage
-                ? "画像を登録しています..."
-                : saving
-                  ? "保存しています..."
-                  : "変更を保存"}
+              {saving ? "保存しています..." : "変更を保存"}
             </button> : <p className="mt-8 rounded-xl bg-neutral-100 p-4 text-center text-sm font-bold text-neutral-600">閲覧権限のため変更は保存できません。</p>}
           </form>
 
@@ -1332,7 +1161,7 @@ function sanitizeFileName(
             <section className="mt-8 rounded-3xl border border-red-200 bg-red-50 p-6 sm:p-8">
               <h2 className="text-lg font-bold text-red-900">イベントの削除</h2>
               <p className="mt-2 text-sm leading-6 text-red-700">削除したイベントは元に戻せません。必要な場合は、削除ではなく公開状態を「中止」に変更してください。</p>
-              <button type="button" onClick={() => void handleDelete()} disabled={deleting || saving || uploadingImage} className="mt-5 rounded-xl bg-red-600 px-5 py-3 text-sm font-bold text-white transition hover:bg-red-700 disabled:bg-neutral-400">
+              <button type="button" onClick={() => void handleDelete()} disabled={deleting || saving} className="mt-5 rounded-xl bg-red-600 px-5 py-3 text-sm font-bold text-white transition hover:bg-red-700 disabled:bg-neutral-400">
                 {deleting ? "削除しています..." : "このイベントを削除"}
               </button>
             </section>
