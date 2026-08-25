@@ -68,7 +68,28 @@ export default function AdminEventsPage() {
     const { data: adminAccess } = await supabase.rpc("is_global_admin");
     setIsGlobalAdmin(Boolean(adminAccess));
 
-    const { data, error } = await supabase
+    let assignedEventIds: string[] | null = null;
+    if (!adminAccess) {
+      const { data: managerRows, error: managerError } = await supabase
+        .from("event_managers")
+        .select("event_id")
+        .eq("user_id", user.id);
+
+      if (managerError) {
+        setMessage(`担当イベントを確認できませんでした：${managerError.message}`);
+        setLoading(false);
+        return;
+      }
+
+      assignedEventIds = (managerRows ?? []).map((row) => row.event_id);
+      if (assignedEventIds.length === 0) {
+        setEvents([]);
+        setLoading(false);
+        return;
+      }
+    }
+
+    let eventQuery = supabase
       .from("events")
       .select(`
         id,
@@ -79,8 +100,11 @@ export default function AdminEventsPage() {
         capacity,
         fee,
         is_ubm
-      `)
-      .order("start_at", {
+      `);
+
+    if (assignedEventIds) eventQuery = eventQuery.in("id", assignedEventIds);
+
+    const { data, error } = await eventQuery.order("start_at", {
         ascending: false,
         nullsFirst: false,
       });

@@ -159,6 +159,11 @@ export default function AdminEventDetailPage() {
       return;
     }
 
+    const { data: viewAccess } = await supabase.rpc("can_manage_event", { p_event_id: eventId, p_edit_required: false });
+    if (!viewAccess) {
+      router.replace("/admin/events");
+      return;
+    }
     const { data: editAccess } = await supabase.rpc("can_manage_event", { p_event_id: eventId, p_edit_required: true });
     setCanEditEvent(Boolean(editAccess));
     const { data: globalAdminAccess } = await supabase.rpc("is_global_admin");

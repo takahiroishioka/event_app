@@ -72,6 +72,7 @@ type EventTask = {
   details: string | null;
   due_at: string | null;
   assignee_user_id: string | null;
+  assignee_name: string | null;
   completion_message: string | null;
   completed_at: string | null;
 };
@@ -207,14 +208,26 @@ export default function EventDetailPage() {
         ]);
         setIsGlobalAdmin(Boolean(adminResult.data));
         if (manageResult.data) {
-          const { data: taskRows, error: taskError } = await supabase
-            .from("event_tasks")
-            .select("id, title, details, due_at, assignee_user_id, completion_message, completed_at")
-            .eq("event_id", eventId)
-            .order("completed_at", { ascending: true, nullsFirst: true })
-            .order("due_at", { ascending: true, nullsFirst: false });
-          if (taskError) console.error("イベントタスク取得エラー:", taskError);
-          else setEventTasks((taskRows ?? []) as EventTask[]);
+          const [taskResult, assigneeResult] = await Promise.all([
+            supabase
+              .from("event_tasks")
+              .select("id, title, details, due_at, assignee_user_id, completion_message, completed_at")
+              .eq("event_id", eventId)
+              .order("completed_at", { ascending: true, nullsFirst: true })
+              .order("due_at", { ascending: true, nullsFirst: false }),
+            supabase.rpc("get_event_task_assignees", { p_event_id: eventId }),
+          ]);
+          if (taskResult.error) {
+            console.error("イベントタスク取得エラー:", taskResult.error);
+          } else {
+            if (assigneeResult.error) console.error("タスク担当者取得エラー:", assigneeResult.error);
+            const assigneeRows = (assigneeResult.data ?? []) as Array<{ user_id: string; name: string }>;
+            const assigneeNames = new Map(assigneeRows.map((person) => [person.user_id, person.name]));
+            setEventTasks((taskResult.data ?? []).map((task) => ({
+              ...task,
+              assignee_name: task.assignee_user_id ? assigneeNames.get(task.assignee_user_id) ?? "担当者不明" : null,
+            })) as EventTask[]);
+          }
         } else {
           setEventTasks([]);
         }
@@ -1099,8 +1112,10 @@ export default function EventDetailPage() {
             <h2 className="mt-2 text-xl font-bold text-neutral-900">イベントタスク</h2>
             <div className="mt-5 grid gap-3 sm:grid-cols-2">
               {eventTasks.map((task) => (
-                <button key={task.id} type="button" onClick={() => openTask(task)} className={`rounded-xl border bg-white px-5 py-4 text-left font-bold transition hover:border-violet-400 hover:bg-violet-50 ${task.completed_at ? "border-green-200 text-neutral-500 line-through" : "border-violet-200 text-neutral-900"}`}>
-                  {task.title}
+                <button key={task.id} type="button" onClick={() => openTask(task)} className={`rounded-xl border bg-white px-5 py-4 text-left transition hover:border-violet-400 hover:bg-violet-50 ${task.completed_at ? "border-green-200 text-neutral-500" : "border-violet-200 text-neutral-900"}`}>
+                  <span className={`block font-bold ${task.completed_at ? "line-through" : ""}`}>{task.title}</span>
+                  <span className="mt-2 block text-xs font-medium text-neutral-500">期日：{task.due_at ? formatDate(task.due_at) : "未設定"}</span>
+                  <span className="mt-1 block text-xs font-medium text-neutral-500">担当：{task.assignee_name ?? "未設定"}</span>
                 </button>
               ))}
             </div>
@@ -1252,6 +1267,7 @@ export default function EventDetailPage() {
                   <div className="flex items-start justify-between gap-4"><div><p className="text-sm font-bold text-violet-600">TASK DETAIL</p><h2 id="task-modal-title" className="mt-2 text-2xl font-bold text-neutral-900">{selectedTask.title}</h2></div><button type="button" onClick={() => setSelectedTask(null)} aria-label="閉じる" className="text-2xl text-neutral-400">×</button></div>
                   <p className="mt-6 whitespace-pre-wrap text-sm leading-7 text-neutral-600">{selectedTask.details || "詳細は登録されていません。"}</p>
                   <p className="mt-5 text-sm text-neutral-500">締め切り：{selectedTask.due_at ? formatDate(selectedTask.due_at) : "未設定"}</p>
+                  <p className="mt-2 text-sm text-neutral-500">担当：{selectedTask.assignee_name ?? "未設定"}</p>
                   {selectedTask.completed_at ? <p className="mt-6 rounded-xl bg-green-50 p-4 text-center font-bold text-green-700">完了済み</p> : (isGlobalAdmin || selectedTask.assignee_user_id === currentUserId) ? <button type="button" onClick={() => void completeTask()} disabled={completingTask} className="mt-6 w-full rounded-xl bg-green-600 px-5 py-4 font-bold text-white disabled:bg-neutral-400">{completingTask ? "完了処理中..." : "完了済みにする"}</button> : <p className="mt-6 rounded-xl bg-neutral-100 p-4 text-center text-sm font-bold text-neutral-600">担当者のみ完了にできます。</p>}
                 </>
               )}
