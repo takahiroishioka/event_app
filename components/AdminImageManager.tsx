@@ -50,6 +50,34 @@ export default function AdminImageManager({
     return () => window.clearTimeout(timer);
   }, [loadImages]);
 
+  async function syncEventPreviewImage() {
+    if (placement !== "event" || !eventId) return null;
+
+    const { data: primaryImage, error: imageError } = await supabase
+      .from("site_images")
+      .select("image_url")
+      .eq("placement", "event")
+      .eq("event_id", eventId)
+      .eq("is_active", true)
+      .order("sort_order")
+      .order("created_at")
+      .limit(1)
+      .maybeSingle();
+
+    if (imageError) return imageError;
+
+    const { data: updatedEvent, error: eventError } = await supabase
+      .from("events")
+      .update({ image_url: primaryImage?.image_url ?? null })
+      .eq("id", eventId)
+      .select("id")
+      .maybeSingle();
+
+    if (eventError) return eventError;
+    if (!updatedEvent) return new Error("イベントカード画像の更新権限がありません。");
+    return null;
+  }
+
   async function uploadImage(inputEvent: ChangeEvent<HTMLInputElement>) {
     const file = inputEvent.target.files?.[0];
     inputEvent.target.value = "";
@@ -89,6 +117,8 @@ export default function AdminImageManager({
     setMessage(error ? `画像を登録できませんでした：${error.message}` : "画像を登録しました。");
     if (!error) {
       setAltText("");
+      const syncError = await syncEventPreviewImage();
+      if (syncError) setMessage(`画像は登録しましたが、一覧画像を更新できませんでした：${syncError.message}`);
       await loadImages();
     }
     setSaving(false);
@@ -98,7 +128,11 @@ export default function AdminImageManager({
     setSaving(true);
     const { error } = await supabase.from("site_images").update(values).eq("id", id);
     setMessage(error ? `更新できませんでした：${error.message}` : "画像を更新しました。");
-    if (!error) await loadImages();
+    if (!error) {
+      const syncError = await syncEventPreviewImage();
+      if (syncError) setMessage(`画像は更新しましたが、一覧画像を更新できませんでした：${syncError.message}`);
+      await loadImages();
+    }
     setSaving(false);
   }
 
@@ -137,7 +171,10 @@ export default function AdminImageManager({
       setMessage("画像を変更できませんでした。この画像の編集権限を確認してください。");
     } else {
       setImages((current) => current.map((image) => image.id === id ? updatedImage as SiteImage : image));
-      setMessage("画像を変更しました。");
+      const syncError = await syncEventPreviewImage();
+      setMessage(syncError
+        ? `画像は変更しましたが、一覧画像を更新できませんでした：${syncError.message}`
+        : "画像を変更しました。");
     }
     setSaving(false);
   }
@@ -147,7 +184,11 @@ export default function AdminImageManager({
     setSaving(true);
     const { error } = await supabase.from("site_images").delete().eq("id", id);
     setMessage(error ? `削除できませんでした：${error.message}` : "画像を削除しました。");
-    if (!error) await loadImages();
+    if (!error) {
+      const syncError = await syncEventPreviewImage();
+      if (syncError) setMessage(`画像は削除しましたが、一覧画像を更新できませんでした：${syncError.message}`);
+      await loadImages();
+    }
     setSaving(false);
   }
 
