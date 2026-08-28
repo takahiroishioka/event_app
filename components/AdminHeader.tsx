@@ -8,7 +8,6 @@ import { createClient } from "@/lib/supabase/client";
 const menuItems = [
   { href: "/admin", label: "管理画面" },
   { href: "/admin/events", label: "イベント管理" },
-  { href: "/admin/lines", label: "セリフ管理" },
   { href: "/admin/participants", label: "参加者管理" },
   { href: "/admin/cancellations", label: "キャンセル申請" },
   { href: "/admin/users", label: "ユーザー一覧" },
@@ -73,6 +72,7 @@ export default function AdminHeader() {
 
           {menuOpen && (
             <nav id="admin-navigation" className="absolute right-0 top-14 max-h-[calc(100vh-5rem)] w-64 overflow-y-auto rounded-2xl border border-neutral-200 bg-white p-2 shadow-xl">
+              <p className="px-4 pb-1 pt-2 text-xs font-black tracking-wider text-neutral-400">イベントアプリ</p>
               {menuItems.map((item) => {
                 const active = item.href === "/admin"
                   ? pathname === item.href
@@ -89,6 +89,11 @@ export default function AdminHeader() {
                   </Link>
                 );
               })}
+
+              <div className="my-2 border-t border-neutral-200" />
+              <p className="px-4 pb-1 pt-2 text-xs font-black tracking-wider text-blue-500">こえらぼ</p>
+              <Link href="/lines" onClick={() => setMenuOpen(false)} className="block rounded-xl px-4 py-3 text-sm font-bold text-neutral-800 hover:bg-neutral-100">こえらぼTOP</Link>
+              <Link href="/admin/lines" onClick={() => setMenuOpen(false)} aria-current={pathname.startsWith("/admin/lines") ? "page" : undefined} className={`block rounded-xl px-4 py-3 text-sm font-bold transition ${pathname.startsWith("/admin/lines") ? "bg-blue-50 text-blue-700" : "text-neutral-800 hover:bg-neutral-100"}`}>セリフ管理・投稿</Link>
 
               <div className="my-2 border-t border-neutral-200" />
               <Link href="/mypage" onClick={() => setMenuOpen(false)} className="block rounded-xl px-4 py-3 text-sm font-bold text-neutral-800 hover:bg-neutral-100">マイページ</Link>
