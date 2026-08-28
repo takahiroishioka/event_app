@@ -80,9 +80,7 @@ export default function SiteHeader({ siteName = "TYPESTYLE EVENT" }: { siteName?
         </Link>
 
         {isLoggedIn === false && (
-          <Link href="/login" className="rounded-xl bg-neutral-900 px-5 py-2.5 text-sm font-bold text-white transition hover:bg-neutral-700">
-            ログイン
-          </Link>
+          <div className="flex items-center gap-3"><Link href="/lines" className="text-sm font-bold text-blue-700">こえらぼ</Link><Link href="/login" className="rounded-xl bg-neutral-900 px-5 py-2.5 text-sm font-bold text-white transition hover:bg-neutral-700">ログイン</Link></div>
         )}
 
         {isLoggedIn && (
@@ -102,6 +100,7 @@ export default function SiteHeader({ siteName = "TYPESTYLE EVENT" }: { siteName?
             {menuOpen && (
               <nav className="absolute right-0 top-14 w-52 overflow-hidden rounded-2xl border border-neutral-200 bg-white p-2 shadow-xl">
                 <Link href="/" onClick={() => setMenuOpen(false)} className="block rounded-xl px-4 py-3 text-sm font-bold text-neutral-800 hover:bg-neutral-100">TOP</Link>
+                <Link href="/lines" onClick={() => setMenuOpen(false)} className="block rounded-xl px-4 py-3 text-sm font-bold text-neutral-800 hover:bg-neutral-100">こえらぼ</Link>
                 <Link href="/mypage" onClick={() => setMenuOpen(false)} className="block rounded-xl px-4 py-3 text-sm font-bold text-neutral-800 hover:bg-neutral-100">マイページ</Link>
                 <button type="button" onClick={handleLogout} disabled={loggingOut} className="block w-full rounded-xl px-4 py-3 text-left text-sm font-bold text-red-600 hover:bg-red-50 disabled:text-neutral-400">
                   {loggingOut ? "ログアウト中…" : "ログアウト"}

@@ -47,6 +47,9 @@ export async function proxy(request: NextRequest) {
   const isPublicPage =
     pathname === "/" ||
     isPublicEventDetail ||
+    pathname === "/lines" ||
+    pathname.startsWith("/lines/") ||
+    pathname.startsWith("/users/") ||
     pathname.startsWith("/login") ||
     pathname.startsWith("/signup") ||
     pathname.startsWith("/auth/callback");

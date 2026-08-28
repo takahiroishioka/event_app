@@ -8,6 +8,8 @@ import { createClient } from "@/lib/supabase/client";
 const menuItems = [
   { href: "/admin", label: "管理画面" },
   { href: "/admin/events", label: "イベント管理" },
+  { href: "/admin/lines", label: "セリフ管理" },
+  { href: "/admin/characters", label: "キャラクター管理" },
   { href: "/admin/participants", label: "参加者管理" },
   { href: "/admin/cancellations", label: "キャンセル申請" },
   { href: "/admin/users", label: "ユーザー一覧" },
