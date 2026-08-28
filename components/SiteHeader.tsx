@@ -13,13 +13,29 @@ export default function SiteHeader({ siteName = "TYPESTYLE EVENT" }: { siteName?
   const [siteNameLoaded, setSiteNameLoaded] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
     const supabase = createClient();
     let active = true;
 
     void supabase.auth.getSession().then(({ data }) => {
-      if (active) setIsLoggedIn(Boolean(data.session));
+      if (!active) return;
+      setIsLoggedIn(Boolean(data.session));
+      const userId = data.session?.user.id;
+      if (userId) {
+        void supabase
+          .from("user_roles")
+          .select("roles!inner(name)")
+          .eq("user_id", userId)
+          .eq("roles.name", "admin")
+          .maybeSingle()
+          .then(({ data: role }) => {
+            if (active) setIsAdmin(Boolean(role));
+          });
+      } else {
+        setIsAdmin(false);
+      }
     });
 
     void supabase
@@ -101,6 +117,7 @@ export default function SiteHeader({ siteName = "TYPESTYLE EVENT" }: { siteName?
               <nav className="absolute right-0 top-14 w-52 overflow-hidden rounded-2xl border border-neutral-200 bg-white p-2 shadow-xl">
                 <Link href="/" onClick={() => setMenuOpen(false)} className="block rounded-xl px-4 py-3 text-sm font-bold text-neutral-800 hover:bg-neutral-100">TOP</Link>
                 <Link href="/lines" onClick={() => setMenuOpen(false)} className="block rounded-xl px-4 py-3 text-sm font-bold text-neutral-800 hover:bg-neutral-100">こえらぼ</Link>
+                {isAdmin && <Link href="/admin/lines" onClick={() => setMenuOpen(false)} className="block rounded-xl bg-blue-50 px-4 py-3 text-sm font-bold text-blue-700 hover:bg-blue-100">セリフを投稿する</Link>}
                 <Link href="/mypage" onClick={() => setMenuOpen(false)} className="block rounded-xl px-4 py-3 text-sm font-bold text-neutral-800 hover:bg-neutral-100">マイページ</Link>
                 <button type="button" onClick={handleLogout} disabled={loggingOut} className="block w-full rounded-xl px-4 py-3 text-left text-sm font-bold text-red-600 hover:bg-red-50 disabled:text-neutral-400">
                   {loggingOut ? "ログアウト中…" : "ログアウト"}
