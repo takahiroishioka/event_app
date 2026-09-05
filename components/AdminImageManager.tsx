@@ -29,7 +29,6 @@ export default function AdminImageManager({
 }) {
   const [images, setImages] = useState<SiteImage[]>([]);
   const [altText, setAltText] = useState("");
-  const [audience, setAudience] = useState<"all" | "general" | "ubm">("all");
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
 
@@ -88,14 +87,13 @@ export default function AdminImageManager({
       sort_order: images.length,
       is_active: true,
       link_url: null,
-      audience: placement === "top" ? audience : "all",
+      audience: "all",
     });
 
     if (error) await supabase.storage.from("event-images").remove([path]);
     setMessage(error ? `画像を登録できませんでした：${error.message}` : "画像を登録しました。");
     if (!error) {
       setAltText("");
-      setAudience("all");
       await loadImages();
     }
     setSaving(false);
@@ -191,7 +189,6 @@ export default function AdminImageManager({
       <label className="mt-5 block text-sm font-bold">画像の説明（任意）
         <input value={altText} onChange={(event) => setAltText(event.target.value)} className="mt-2 w-full rounded-xl border border-neutral-300 p-3 font-normal" />
       </label>
-      {placement === "top" && !readOnly && <label className="mt-4 block max-w-xs text-sm font-bold">表示対象<select value={audience} onChange={(event) => setAudience(event.target.value as "all" | "general" | "ubm")} className="mt-2 w-full rounded-xl border border-neutral-300 bg-white p-3 font-normal"><option value="all">全員</option><option value="general">一般ユーザー</option><option value="ubm">UBMユーザー</option></select></label>}
       {!readOnly && <label className="mt-4 inline-flex cursor-pointer rounded-xl bg-blue-600 px-5 py-3 text-sm font-bold text-white">
         {saving ? "処理中…" : "16:9画像を追加"}
         <input type="file" accept="image/jpeg,image/png,image/webp,image/gif" disabled={saving} onChange={uploadImage} className="hidden" />
@@ -235,7 +232,6 @@ export default function AdminImageManager({
                   />
                 </label>
               </>}
-              {placement === "top" && !readOnly && <label className="mt-4 block max-w-xs text-sm font-bold">表示対象<select value={audience} onChange={(event) => setAudience(event.target.value as "all" | "general" | "ubm")} className="mt-2 w-full rounded-xl border border-neutral-300 bg-white p-3 font-normal"><option value="all">全員</option><option value="general">一般ユーザー</option><option value="ubm">UBMユーザー</option></select></label>}
       {!readOnly && <label className="mt-4 inline-flex cursor-pointer rounded-lg border border-blue-300 px-3 py-2 text-sm font-bold text-blue-700">
                 {saving ? "処理中…" : "画像を変更"}
                 <input type="file" accept="image/jpeg,image/png,image/webp,image/gif" disabled={saving} onChange={(event) => void replaceImage(image.id, event)} className="hidden" />
