@@ -324,7 +324,7 @@ export default function MyPage() {
       if (bannerError) {
         console.error("バナー取得エラー:", bannerError);
       } else if (bannerRows?.length) {
-        const visibleBannerRows = bannerRows.filter((banner) => !banner.audience || banner.audience === "all" || banner.audience === (ubmAccess ? "ubm" : "general"));
+        const visibleBannerRows = bannerRows.filter((banner) => !ubmAccess || !banner.audience || banner.audience === "all" || banner.audience === "ubm");
         const { data: bannerImages, error: bannerImageError } = await supabase
           .from("site_images")
           .select("id, image_url, alt_text, banner_id")

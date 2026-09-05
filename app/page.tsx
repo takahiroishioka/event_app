@@ -17,6 +17,7 @@ type EventRow = {
   location: string | null;
   fee: number;
   image_url: string | null;
+  is_ubm: boolean;
 };
 
 type TopPageSettings = {
@@ -71,7 +72,7 @@ export default function Home() {
       const [eventResult, imageResult, settingsResult, bannerResult, footerResult] = await Promise.all([
         supabase
           .from("events")
-          .select("id, title, description, start_at, location, fee")
+          .select("id, title, description, start_at, location, fee, is_ubm")
           .eq("status", "published")
           .order("start_at", { ascending: true, nullsFirst: false }),
         supabase
@@ -118,11 +119,11 @@ export default function Home() {
           : { data: [], error: null };
 
         if (eventImageError) console.error("イベント画像取得エラー:", eventImageError);
-        setEvents(attachEventPreviewImages(eventRows, eventImages ?? []).filter((event) => !isPastEvent(event)) as EventRow[]);
+        setEvents(attachEventPreviewImages(eventRows, eventImages ?? []).filter((event) => !isPastEvent(event) && (contentAudience === "general" || event.is_ubm)) as EventRow[]);
       }
 
       if (!imageResult.error) {
-        setTopImages((imageResult.data ?? []).filter((image) => !image.audience || image.audience === "all" || image.audience === contentAudience) as CarouselImage[]);
+        setTopImages((imageResult.data ?? []).filter((image) => contentAudience === "general" || !image.audience || image.audience === "all" || image.audience === "ubm") as CarouselImage[]);
       }
 
       if (!settingsResult.error && settingsResult.data) {
@@ -134,7 +135,7 @@ export default function Home() {
       }
 
       if (!bannerResult.error && bannerResult.data?.length) {
-        const visibleBanners = bannerResult.data.filter((banner) => !banner.audience || banner.audience === "all" || banner.audience === contentAudience);
+        const visibleBanners = bannerResult.data.filter((banner) => contentAudience === "general" || !banner.audience || banner.audience === "all" || banner.audience === "ubm");
         const bannerIds = visibleBanners.map((banner) => banner.id);
         const { data: bannerImages } = await supabase
           .from("site_images")
