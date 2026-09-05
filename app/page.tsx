@@ -62,8 +62,9 @@ export default function Home() {
     async function loadEvents() {
       const supabase = createClient();
       const { data: { user } } = await supabase.auth.getUser();
-      let contentAudience: "general" | "ubm" = "general";
+      let contentAudience: "general" | "ubm" = "ubm";
       if (user) {
+        contentAudience = "general";
         const { data: ubmAccess } = await supabase.rpc("is_ubm_restricted_user");
         if (ubmAccess) contentAudience = "ubm";
       }
@@ -313,4 +314,5 @@ function formatMonth(value: string) {
   const [year, month] = value.split("-");
   return `${year}年${Number(month)}月`;
 }
+
 
