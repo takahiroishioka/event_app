@@ -885,6 +885,10 @@ function sanitizeFileName(
           </Link>
         </div>
 
+        <div className="mb-6 flex justify-end">
+          <Link href={`/admin/events/${eventId}/questions`} className="rounded-xl bg-blue-600 px-5 py-3 text-sm font-bold text-white transition hover:bg-blue-700">質問を作成・管理</Link>
+        </div>
+
         <header className="rounded-3xl bg-white p-6 shadow-sm sm:p-8">
           <p className="text-sm font-bold text-blue-600">
             EVENT MANAGEMENT
@@ -1512,3 +1516,4 @@ function formatDate(
 
 const inputClass =
   "w-full rounded-xl border border-neutral-300 bg-white px-4 py-3 text-neutral-900 outline-none transition placeholder:text-neutral-400 focus:border-blue-600 disabled:cursor-not-allowed disabled:bg-neutral-100 disabled:text-neutral-500";
+
