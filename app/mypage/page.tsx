@@ -316,7 +316,7 @@ export default function MyPage() {
 
       const { data: bannerRows, error: bannerError } = await supabase
         .from("banners")
-        .select("id, title, link_url")
+        .select("id, title, link_url, audience")
         .eq("placement", "mypage")
         .eq("is_active", true)
         .order("sort_order");
@@ -324,15 +324,16 @@ export default function MyPage() {
       if (bannerError) {
         console.error("バナー取得エラー:", bannerError);
       } else if (bannerRows?.length) {
+        const visibleBannerRows = bannerRows.filter((banner) => !banner.audience || banner.audience === "all" || banner.audience === (ubmAccess ? "ubm" : "general"));
         const { data: bannerImages, error: bannerImageError } = await supabase
           .from("site_images")
           .select("id, image_url, alt_text, banner_id")
-          .in("banner_id", bannerRows.map((banner) => banner.id))
+          .in("banner_id", visibleBannerRows.map((banner) => banner.id))
           .eq("placement", "banner")
           .eq("is_active", true)
           .order("sort_order");
         if (bannerImageError) console.error("バナー画像取得エラー:", bannerImageError);
-        else setBanners(bannerRows.map((banner) => ({
+        else setBanners(visibleBannerRows.map((banner) => ({
           ...banner,
           images: (bannerImages ?? []).filter((image) => image.banner_id === banner.id),
         })) as Banner[]);
@@ -634,3 +635,4 @@ function compareEventDates(a: EventData, b: EventData) {
   const bTime = b.start_at ? new Date(b.start_at).getTime() : Number.MAX_SAFE_INTEGER;
   return aTime - bTime;
 }
+

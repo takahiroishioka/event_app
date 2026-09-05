@@ -15,6 +15,7 @@ type BannerRow = {
   placement: "top" | "mypage";
   sort_order: number;
   is_active: boolean;
+  audience: "all" | "general" | "ubm";
 };
 
 export default function AdminBannersPage() {
@@ -23,6 +24,7 @@ export default function AdminBannersPage() {
   const [title, setTitle] = useState("");
   const [linkUrl, setLinkUrl] = useState("");
   const [placement, setPlacement] = useState<"top" | "mypage">("top");
+  const [audience, setAudience] = useState<"all" | "general" | "ubm">("all");
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
 
@@ -32,7 +34,7 @@ export default function AdminBannersPage() {
       router.replace("/login?redirect=/admin/banners");
       return;
     }
-    const { data, error } = await supabase.from("banners").select("id, title, link_url, placement, sort_order, is_active").order("sort_order");
+    const { data, error } = await supabase.from("banners").select("id, title, link_url, placement, sort_order, is_active, audience").order("sort_order");
     if (error) setMessage(`バナーを取得できませんでした：${error.message}`);
     else setBanners((data ?? []) as BannerRow[]);
   }, [router]);
@@ -46,13 +48,14 @@ export default function AdminBannersPage() {
     event.preventDefault();
     setSaving(true);
     const { error } = await supabase.from("banners").insert({
-      title: title.trim(), link_url: linkUrl.trim(), placement,
+      title: title.trim(), link_url: linkUrl.trim(), placement, audience,
       sort_order: banners.filter((banner) => banner.placement === placement).length,
     });
     setMessage(error ? `バナーを作成できませんでした：${error.message}` : "バナーを作成しました。下の画像一覧から画像を追加してください。");
     if (!error) {
       setTitle("");
       setLinkUrl("");
+      setAudience("all");
       await loadBanners();
     }
     setSaving(false);
@@ -62,7 +65,7 @@ export default function AdminBannersPage() {
     setSaving(true);
     const { error } = await supabase.from("banners").update({
       title: banner.title.trim(), link_url: banner.link_url.trim(), placement: banner.placement,
-      sort_order: banner.sort_order, is_active: banner.is_active, updated_at: new Date().toISOString(),
+      sort_order: banner.sort_order, is_active: banner.is_active, audience: banner.audience, updated_at: new Date().toISOString(),
     }).eq("id", banner.id);
     setMessage(error ? `バナーを更新できませんでした：${error.message}` : "バナーを更新しました。");
     if (!error) await loadBanners();
@@ -107,10 +110,11 @@ export default function AdminBannersPage() {
 
         <form onSubmit={createBanner} className="mt-6 rounded-3xl bg-white p-6 shadow-sm sm:p-8">
           <h2 className="text-xl font-bold">新しいバナー</h2>
-          <div className="mt-5 grid gap-4 md:grid-cols-3">
+          <div className="mt-5 grid gap-4 md:grid-cols-4">
             <label className="text-sm font-bold">管理名<input required value={title} onChange={(event) => setTitle(event.target.value)} className={inputClass} /></label>
             <label className="text-sm font-bold">リンク先<input required type="url" value={linkUrl} onChange={(event) => setLinkUrl(event.target.value)} placeholder="https://..." className={inputClass} /></label>
             <label className="text-sm font-bold">表示場所<select value={placement} onChange={(event) => setPlacement(event.target.value as "top" | "mypage")} className={inputClass}><option value="top">TOPページ下部</option><option value="mypage">マイページ下部</option></select></label>
+            <label className="text-sm font-bold">表示対象<select value={audience} onChange={(event) => setAudience(event.target.value as "all" | "general" | "ubm")} className={inputClass}><option value="all">全員</option><option value="general">一般ユーザー</option><option value="ubm">UBMユーザー</option></select></label>
           </div>
           <button disabled={saving} className="mt-5 rounded-xl bg-blue-600 px-5 py-3 font-bold text-white disabled:bg-neutral-400">バナーを作成</button>
         </form>
@@ -124,7 +128,7 @@ export default function AdminBannersPage() {
                 <label className="text-sm font-bold">管理名<input value={banner.title} onChange={(event) => changeBanner(banner.id, { title: event.target.value })} className={inputClass} /></label>
                 <label className="text-sm font-bold">リンク先<input type="url" value={banner.link_url} onChange={(event) => changeBanner(banner.id, { link_url: event.target.value })} className={inputClass} /></label>
                 <label className="text-sm font-bold">表示場所<select value={banner.placement} onChange={(event) => changeBanner(banner.id, { placement: event.target.value as "top" | "mypage" })} className={inputClass}><option value="top">TOPページ下部</option><option value="mypage">マイページ下部</option></select></label>
-                <label className="text-sm font-bold">表示順<input type="number" value={banner.sort_order} onChange={(event) => changeBanner(banner.id, { sort_order: Number(event.target.value) })} className={inputClass} /></label>
+                <label className="text-sm font-bold">表示対象<select value={banner.audience ?? "all"} onChange={(event) => changeBanner(banner.id, { audience: event.target.value as "all" | "general" | "ubm" })} className={inputClass}><option value="all">全員</option><option value="general">一般ユーザー</option><option value="ubm">UBMユーザー</option></select></label><label className="text-sm font-bold">表示順<input type="number" value={banner.sort_order} onChange={(event) => changeBanner(banner.id, { sort_order: Number(event.target.value) })} className={inputClass} /></label>
                 <label className="flex items-center gap-2 text-sm font-bold"><input type="checkbox" checked={banner.is_active} onChange={(event) => changeBanner(banner.id, { is_active: event.target.checked })} />公開</label>
                 <div className="flex gap-4 md:col-span-3 md:justify-end">
                   <button type="button" disabled={saving} onClick={() => void updateBanner(banner)} className="rounded-xl bg-blue-600 px-5 py-3 text-sm font-bold text-white">設定を保存</button>
@@ -140,3 +144,4 @@ export default function AdminBannersPage() {
     </main>
   );
 }
+

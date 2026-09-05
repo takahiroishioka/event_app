@@ -61,6 +61,12 @@ export default function Home() {
 
     async function loadEvents() {
       const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      let contentAudience: "general" | "ubm" = "general";
+      if (user) {
+        const { data: ubmAccess } = await supabase.rpc("is_ubm_restricted_user");
+        if (ubmAccess) contentAudience = "ubm";
+      }
       const [eventResult, imageResult, settingsResult, bannerResult, footerResult] = await Promise.all([
         supabase
           .from("events")
@@ -69,7 +75,7 @@ export default function Home() {
           .order("start_at", { ascending: true, nullsFirst: false }),
         supabase
           .from("site_images")
-          .select("id, image_url, alt_text, link_url")
+          .select("id, image_url, alt_text, link_url, audience")
           .eq("placement", "top")
           .eq("is_active", true)
           .order("sort_order"),
@@ -80,7 +86,7 @@ export default function Home() {
           .maybeSingle(),
         supabase
           .from("banners")
-          .select("id, title, link_url")
+          .select("id, title, link_url, audience")
           .eq("placement", "top")
           .eq("is_active", true)
           .order("sort_order"),
@@ -115,7 +121,7 @@ export default function Home() {
       }
 
       if (!imageResult.error) {
-        setTopImages((imageResult.data ?? []) as CarouselImage[]);
+        setTopImages((imageResult.data ?? []).filter((image) => !image.audience || image.audience === "all" || image.audience === contentAudience) as CarouselImage[]);
       }
 
       if (!settingsResult.error && settingsResult.data) {
@@ -127,7 +133,8 @@ export default function Home() {
       }
 
       if (!bannerResult.error && bannerResult.data?.length) {
-        const bannerIds = bannerResult.data.map((banner) => banner.id);
+        const visibleBanners = bannerResult.data.filter((banner) => !banner.audience || banner.audience === "all" || banner.audience === contentAudience);
+        const bannerIds = visibleBanners.map((banner) => banner.id);
         const { data: bannerImages } = await supabase
           .from("site_images")
           .select("id, image_url, alt_text, banner_id")
@@ -135,7 +142,7 @@ export default function Home() {
           .eq("placement", "banner")
           .eq("is_active", true)
           .order("sort_order");
-        if (active) setBanners(bannerResult.data.map((banner) => ({
+        if (active) setBanners(visibleBanners.map((banner) => ({
           ...banner,
           images: (bannerImages ?? []).filter((image) => image.banner_id === banner.id),
         })) as Banner[]);
@@ -306,3 +313,4 @@ function formatMonth(value: string) {
   const [year, month] = value.split("-");
   return `${year}年${Number(month)}月`;
 }
+

@@ -13,6 +13,7 @@ type SiteImage = {
   sort_order: number;
   is_active: boolean;
   link_url: string | null;
+  audience: "all" | "general" | "ubm";
 };
 
 export default function AdminImageManager({
@@ -28,13 +29,14 @@ export default function AdminImageManager({
 }) {
   const [images, setImages] = useState<SiteImage[]>([]);
   const [altText, setAltText] = useState("");
+  const [audience, setAudience] = useState<"all" | "general" | "ubm">("all");
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
 
   const loadImages = useCallback(async () => {
     let query = supabase
       .from("site_images")
-      .select("id, image_url, storage_path, alt_text, sort_order, is_active, link_url")
+      .select("id, image_url, storage_path, alt_text, sort_order, is_active, link_url, audience")
       .eq("placement", placement)
       .order("sort_order");
 
@@ -86,12 +88,14 @@ export default function AdminImageManager({
       sort_order: images.length,
       is_active: true,
       link_url: null,
+      audience: placement === "top" ? audience : "all",
     });
 
     if (error) await supabase.storage.from("event-images").remove([path]);
     setMessage(error ? `画像を登録できませんでした：${error.message}` : "画像を登録しました。");
     if (!error) {
       setAltText("");
+      setAudience("all");
       await loadImages();
     }
     setSaving(false);
@@ -141,7 +145,7 @@ export default function AdminImageManager({
       .from("site_images")
       .update({ image_url: urlData.publicUrl, storage_path: path, updated_at: new Date().toISOString() })
       .eq("id", id)
-      .select("id, image_url, storage_path, alt_text, sort_order, is_active, link_url")
+      .select("id, image_url, storage_path, alt_text, sort_order, is_active, link_url, audience")
       .maybeSingle();
 
     if (error) {
@@ -187,6 +191,7 @@ export default function AdminImageManager({
       <label className="mt-5 block text-sm font-bold">画像の説明（任意）
         <input value={altText} onChange={(event) => setAltText(event.target.value)} className="mt-2 w-full rounded-xl border border-neutral-300 p-3 font-normal" />
       </label>
+      {placement === "top" && !readOnly && <label className="mt-4 block max-w-xs text-sm font-bold">表示対象<select value={audience} onChange={(event) => setAudience(event.target.value as "all" | "general" | "ubm")} className="mt-2 w-full rounded-xl border border-neutral-300 bg-white p-3 font-normal"><option value="all">全員</option><option value="general">一般ユーザー</option><option value="ubm">UBMユーザー</option></select></label>}
       {!readOnly && <label className="mt-4 inline-flex cursor-pointer rounded-xl bg-blue-600 px-5 py-3 text-sm font-bold text-white">
         {saving ? "処理中…" : "16:9画像を追加"}
         <input type="file" accept="image/jpeg,image/png,image/webp,image/gif" disabled={saving} onChange={uploadImage} className="hidden" />
@@ -216,7 +221,8 @@ export default function AdminImageManager({
                   <input type="number" value={image.sort_order} disabled={saving || readOnly} onChange={(event) => updateImage(image.id, { sort_order: Number(event.target.value) })} className="ml-2 w-16 rounded-lg border p-2" />
                 </label>
               </div>
-              {placement === "top" && (
+              {placement === "top" && <>
+                <label className="mt-4 block text-sm font-bold">表示対象<select value={image.audience ?? "all"} disabled={saving || readOnly} onChange={(event) => { const value = event.target.value as "all" | "general" | "ubm"; setImages((current) => current.map((row) => row.id === image.id ? { ...row, audience: value } : row)); void updateImage(image.id, { audience: value }); }} className="mt-2 w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 font-normal"><option value="all">全員</option><option value="general">一般ユーザー</option><option value="ubm">UBMユーザー</option></select></label>
                 <label className="mt-4 block text-sm font-bold">リンク先（任意）
                   <input
                     type="url"
@@ -228,8 +234,9 @@ export default function AdminImageManager({
                     className="mt-2 w-full rounded-lg border border-neutral-300 px-3 py-2 font-normal text-neutral-900"
                   />
                 </label>
-              )}
-              {!readOnly && <label className="mt-4 inline-flex cursor-pointer rounded-lg border border-blue-300 px-3 py-2 text-sm font-bold text-blue-700">
+              </>}
+              {placement === "top" && !readOnly && <label className="mt-4 block max-w-xs text-sm font-bold">表示対象<select value={audience} onChange={(event) => setAudience(event.target.value as "all" | "general" | "ubm")} className="mt-2 w-full rounded-xl border border-neutral-300 bg-white p-3 font-normal"><option value="all">全員</option><option value="general">一般ユーザー</option><option value="ubm">UBMユーザー</option></select></label>}
+      {!readOnly && <label className="mt-4 inline-flex cursor-pointer rounded-lg border border-blue-300 px-3 py-2 text-sm font-bold text-blue-700">
                 {saving ? "処理中…" : "画像を変更"}
                 <input type="file" accept="image/jpeg,image/png,image/webp,image/gif" disabled={saving} onChange={(event) => void replaceImage(image.id, event)} className="hidden" />
               </label>}
@@ -241,3 +248,4 @@ export default function AdminImageManager({
     </section>
   );
 }
+
