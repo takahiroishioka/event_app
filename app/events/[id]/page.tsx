@@ -634,16 +634,6 @@ export default function EventDetailPage() {
     setMessage("");
     setIsError(false);
 
-    if (
-      !hasCompletedRequiredQuestions
-    ) {
-      setIsError(true);
-      setMessage(
-        "必須の質問に回答してください。"
-      );
-      return;
-    }
-
     setProcessing(true);
 
     const {
@@ -668,9 +658,23 @@ export default function EventDetailPage() {
     if (!user) {
       router.replace(
         `/login?redirect=${encodeURIComponent(
-          `/events/${event.id}`
+          `/events/${event.id}#application`
         )}`
       );
+      return;
+    }
+
+    if (
+      !hasCompletedRequiredQuestions
+    ) {
+      setIsError(true);
+      setMessage(
+        "必須の質問に回答してください。"
+      );
+      setProcessing(false);
+      document
+        .getElementById("application")
+        ?.scrollIntoView({ behavior: "smooth", block: "start" });
       return;
     }
 
@@ -1161,7 +1165,7 @@ export default function EventDetailPage() {
         )}
 
         {canJoin && (
-          <div className="mt-6">
+          <div id="application" className="mt-6 scroll-mt-24">
             {isLoggedIn && (
               <EventApplicationQuestions
                 questions={questions}
@@ -1202,7 +1206,7 @@ export default function EventDetailPage() {
         {isJoined &&
           userEvent?.status !==
             "cancel_requested" && (
-            <div className="mt-6">
+            <div className="mt-6"
             {payment?.status === "paid" && (
               <div className="mb-4 rounded-2xl bg-white p-5 shadow-sm">
                 <p className="font-bold text-neutral-900">返金方法</p>
