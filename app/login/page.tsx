@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
@@ -12,6 +12,14 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
+  const [signupPath, setSignupPath] = useState("/signup");
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const redirect = getRedirectPath();
+    const signupBase = params.get("signup") === "ubm" ? "/signup/ubm" : "/signup";
+    setSignupPath(`${signupBase}?redirect=${encodeURIComponent(redirect)}`);
+  }, []);
 
   async function handleGoogleLogin() {
     setLoading(true);
@@ -150,7 +158,7 @@ export default function LoginPage() {
         <p className="mt-7 text-center text-sm text-neutral-500">
           アカウントをお持ちでない方は
           <a
-            href="/signup"
+            href={signupPath}
             className="ml-1 font-bold text-neutral-900 underline underline-offset-4"
           >
             新規登録

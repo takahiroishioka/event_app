@@ -35,6 +35,7 @@ type EventData = {
   fee: number;
   payment_management_required: boolean;
   payment_note: string | null;
+  is_ubm: boolean;
   status: string;
 };
 
@@ -179,6 +180,7 @@ export default function EventDetailPage() {
           fee,
           payment_management_required,
           payment_note,
+          is_ubm,
           status
         `)
         .eq("id", eventId)
@@ -1209,7 +1211,7 @@ export default function EventDetailPage() {
                 <p className="mt-3 text-sm text-neutral-500">ゲストとして申し込むか、ログインして申し込めます。</p>
                 <div className="mt-6 grid gap-3 sm:grid-cols-2">
                   <button type="button" onClick={() => setGuestApplicationOpen(true)} className="rounded-xl bg-blue-600 px-5 py-4 font-bold text-white hover:bg-blue-700">ゲストとして申し込む</button>
-                  <button type="button" onClick={() => router.push(`/login?redirect=${encodeURIComponent(`/events/${event.id}#application`)}`)} className="rounded-xl border border-blue-600 bg-white px-5 py-4 font-bold text-blue-700 hover:bg-blue-50">ログインして申し込む</button>
+                  <button type="button" onClick={() => router.push(`/login?redirect=${encodeURIComponent(`/events/${event.id}#application`)}${event.is_ubm ? "&signup=ubm" : ""}`)} className="rounded-xl border border-blue-600 bg-white px-5 py-4 font-bold text-blue-700 hover:bg-blue-50">ログインして申し込む</button>
                 </div>
               </section>
             )}

@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
@@ -20,6 +20,11 @@ export function SignupForm({ ubm = false }: { ubm?: boolean }) {
   const [message, setMessage] = useState("");
   const [isError, setIsError] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [redirectPath, setRedirectPath] = useState("/mypage");
+
+  useEffect(() => {
+    setRedirectPath(getSignupRedirectPath());
+  }, []);
 
   async function handleSignup(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -64,7 +69,7 @@ export function SignupForm({ ubm = false }: { ubm?: boolean }) {
           name: trimmedName,
           signup_type: ubm ? "ubm" : "general",
         },
-        emailRedirectTo: `${window.location.origin}/auth/callback?next=/mypage${ubm ? "&signup=ubm" : ""}`,
+        emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(redirectPath)}${ubm ? "&signup=ubm" : ""}`,
       },
     });
 
@@ -89,7 +94,7 @@ export function SignupForm({ ubm = false }: { ubm?: boolean }) {
           return;
         }
       }
-      router.push("/mypage");
+      router.push(redirectPath);
       router.refresh();
       return;
     }
@@ -113,7 +118,7 @@ export function SignupForm({ ubm = false }: { ubm?: boolean }) {
       provider: "google",
       options: {
         redirectTo:
-          `${window.location.origin}/auth/callback?next=/mypage${ubm ? "&signup=ubm" : ""}`,
+          `${window.location.origin}/auth/callback?next=${encodeURIComponent(redirectPath)}${ubm ? "&signup=ubm" : ""}`,
       },
     });
 
@@ -279,7 +284,7 @@ export function SignupForm({ ubm = false }: { ubm?: boolean }) {
         <p className="mt-7 text-center text-sm text-neutral-500">
           すでにアカウントをお持ちの方は
           <a
-            href="/login"
+            href={`/login?redirect=${encodeURIComponent(redirectPath)}${ubm ? "&signup=ubm" : ""}`}
             className="ml-1 font-bold text-neutral-900 underline underline-offset-4"
           >
             ログイン
@@ -290,6 +295,11 @@ export function SignupForm({ ubm = false }: { ubm?: boolean }) {
   );
 }
 
+function getSignupRedirectPath() {
+  if (typeof window === "undefined") return "/mypage";
+  const requestedPath = new URLSearchParams(window.location.search).get("redirect");
+  return requestedPath?.startsWith("/") && !requestedPath.startsWith("//") ? requestedPath : "/mypage";
+}
 function GoogleIcon() {
   return (
     <svg
