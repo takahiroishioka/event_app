@@ -43,7 +43,7 @@ export default function PaymentPage() {
       .select("id, title, fee, payment_management_required")
       .eq("id", eventId)
       .maybeSingle();
-    if (eventError || !event || event.fee <= 0 || !event.payment_management_required) {
+    if (eventError || !event || !event.payment_management_required) {
       setIsError(true);
       setMessage("支払い対象のイベントを確認できませんでした。");
       setLoading(false);
@@ -52,7 +52,7 @@ export default function PaymentPage() {
 
     const { data: registration, error: registrationError } = await supabase
       .from("user_events")
-      .select("id, status")
+      .select("id, status, plan_id")
       .eq("user_id", user.id)
       .eq("event_id", eventId)
       .in("status", ["reserved", "joined"])
@@ -70,8 +70,14 @@ export default function PaymentPage() {
       .eq("user_event_id", registration.id)
       .maybeSingle();
 
+    let paymentAmount = event.fee;
+    if (registration.plan_id) {
+      const { data: plan, error: planError } = await supabase.from("event_plans").select("fee").eq("id", registration.plan_id).single();
+      if (planError || !plan) { setIsError(true); setMessage("申込みプランを確認できませんでした。"); setLoading(false); return; }
+      paymentAmount = plan.fee;
+    }
     setEventTitle(event.title);
-    setAmount(event.fee);
+    setAmount(paymentAmount);
     setUserEventId(registration.id);
     if (paymentError) {
       setIsError(true);
@@ -79,9 +85,9 @@ export default function PaymentPage() {
     } else if (savedPayment) {
       const typedPayment = savedPayment as PaymentRow;
       setPayment(typedPayment);
-      setMethod(event.fee > 0 && event.fee < 1000 ? "cash" : typedPayment.method || "");
+      setMethod(paymentAmount > 0 && paymentAmount < 1000 ? "cash" : typedPayment.method || "");
       setNote(typedPayment.note || "");
-    } else if (event.fee > 0 && event.fee < 1000) {
+    } else if (paymentAmount > 0 && paymentAmount < 1000) {
       setMethod("cash");
     }
     setLoading(false);

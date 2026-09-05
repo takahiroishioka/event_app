@@ -44,6 +44,8 @@ type UserEventData = {
   refund_method?: string | null;
 };
 
+type EventPlan = { id: string; name: string; description: string | null; fee: number; capacity: number | null; };
+
 type PaymentData = {
   id: string;
   status: string;
@@ -94,6 +96,9 @@ export default function EventDetailPage() {
 
   const [payment, setPayment] =
     useState<PaymentData | null>(null);
+
+  const [plans, setPlans] = useState<EventPlan[]>([]);
+  const [selectedPlanId, setSelectedPlanId] = useState("");
 
   const [isLoggedIn, setIsLoggedIn] =
     useState(false);
@@ -204,6 +209,12 @@ export default function EventDetailPage() {
 
       setEvent(eventData);
 
+      const { data: planData, error: planError } = await supabase.from("event_plans").select("id, name, description, fee, capacity").eq("event_id", eventId).eq("is_active", true).order("sort_order");
+      if (planError) console.error("プラン取得エラー:", planError);
+      const availablePlans = (planData ?? []) as EventPlan[];
+      setPlans(availablePlans);
+      if (availablePlans.length === 1) setSelectedPlanId(availablePlans[0].id);
+
       if (user) {
         const [manageResult, adminResult] = await Promise.all([
           supabase.rpc("can_manage_event", { p_event_id: eventId, p_edit_required: false }),
@@ -259,7 +270,7 @@ export default function EventDetailPage() {
           error: registrationError,
         } = await supabase
           .from("user_events")
-          .select("id, status, refund_method")
+          .select("id, status, refund_method, plan_id")
           .eq("user_id", user.id)
           .eq("event_id", eventId)
           .maybeSingle();
@@ -272,6 +283,7 @@ export default function EventDetailPage() {
         }
 
         setUserEvent(registrationData ?? null);
+        if (registrationData?.plan_id) setSelectedPlanId(registrationData.plan_id);
         setRefundMethod((registrationData?.refund_method as "bank" | "hand" | null) ?? "");
 
         if (registrationData) {
@@ -318,11 +330,6 @@ export default function EventDetailPage() {
 
       setParticipantCount(count ?? 0);
 
-      if (!user) {
-        setQuestions([]);
-        setLoading(false);
-        return;
-      }
 
       const {
         data: questionRows,
@@ -507,15 +514,18 @@ export default function EventDetailPage() {
     userEvent?.status ===
       "cancel_requested";
 
+  const selectedPlan = plans.find((plan) => plan.id === selectedPlanId);
+  const applicationFee = selectedPlan?.fee ?? event?.fee ?? 0;
+
   const canManagePayment =
     event !== null &&
-    event.fee > 0 &&
+    applicationFee > 0 &&
     event.payment_management_required &&
     (userEvent?.status === "reserved" ||
       userEvent?.status === "joined");
 
   async function handlePaymentConfirmation() {
-    if (!payment || !event || event.fee <= 0 || payment.status !== "pending") return;
+    if (!payment || !event || applicationFee <= 0 || payment.status !== "pending") return;
 
     setProcessing(true);
     setMessage("");
@@ -636,6 +646,7 @@ export default function EventDetailPage() {
     setIsError(false);
     if (!normalizedName) { setIsError(true); setMessage("お名前を入力してください。"); return; }
     if (!hasCompletedRequiredQuestions) { setIsError(true); setMessage("必須の質問に回答してください。"); return; }
+    if (plans.length > 0 && !selectedPlanId) { setIsError(true); setMessage("プランを選択してください。"); return; }
     setProcessing(true);
     const answerPayload = questions.reduce<Record<string, string | string[]>>((current, question) => {
       const answer = answers[question.id];
@@ -643,7 +654,7 @@ export default function EventDetailPage() {
       if (Array.isArray(answer) && answer.length > 0) current[question.id] = answer;
       return current;
     }, {});
-    const { error } = await supabase.rpc("submit_guest_event_application", { p_event_id: event.id, p_guest_name: normalizedName, p_answers: answerPayload });
+    const { error } = await supabase.rpc("submit_guest_event_application", { p_event_id: event.id, p_guest_name: normalizedName, p_answers: answerPayload, p_plan_id: selectedPlanId || null });
     if (error) { setIsError(true); setMessage(`ゲスト申込みに失敗しました：${error.message}`); }
     else { setGuestApplicationOpen(false); setMessage("ゲストとして参加申込みを受け付けました。"); }
     setProcessing(false);
@@ -655,6 +666,8 @@ export default function EventDetailPage() {
 
     setMessage("");
     setIsError(false);
+
+    if (plans.length > 0 && !selectedPlanId) { setIsError(true); setMessage("プランを選択してください。"); return; }
 
     setProcessing(true);
 
@@ -775,6 +788,7 @@ export default function EventDetailPage() {
               null,
             cancellation_reason: null,
             checked_in_at: null,
+            plan_id: selectedPlanId || null,
           })
           .eq(
             "id",
@@ -801,6 +815,7 @@ export default function EventDetailPage() {
             user_id: user.id,
             event_id: event.id,
             status: nextStatus,
+            plan_id: selectedPlanId || null,
           })
           .select("id, status")
           .single();
@@ -944,7 +959,7 @@ export default function EventDetailPage() {
         refund_method: payment?.status === "paid" ? refundMethod : null,
       })
       .eq("id", userEvent.id)
-      .select("id, status, refund_method")
+      .select("id, status, refund_method, plan_id")
       .single();
 
     if (error) {
@@ -1120,7 +1135,7 @@ export default function EventDetailPage() {
                   value={
                     <div className="flex flex-wrap items-center gap-2">
                       <span>{formatFee(event.fee)}</span>
-                      {isJoined && event.payment_management_required && event.fee > 0 && <PaymentStatusBadge fee={event.fee} status={payment?.status ?? null} />}
+                      {isJoined && event.payment_management_required && applicationFee > 0 && <PaymentStatusBadge fee={applicationFee} status={payment?.status ?? null} />}
                     </div>
                   }
                 />
@@ -1153,7 +1168,7 @@ export default function EventDetailPage() {
             <p className="text-sm font-bold text-blue-600">PAYMENT</p>
             <h2 className="mt-2 text-xl font-bold text-neutral-900">参加費のお支払い</h2>
             <p className="mt-3 text-sm leading-6 text-neutral-600">
-              参加費は{formatFee(event.fee)}です。支払い方法を登録してください。
+              参加費は{formatFee(applicationFee)}です。支払い方法を登録してください。
             </p>
             {payment?.status !== "confirmation_requested" && payment?.status !== "paid" && (
               <Link
@@ -1163,7 +1178,7 @@ export default function EventDetailPage() {
                 {payment ? "支払方法変更" : "支払い方法を選ぶ"}
               </Link>
             )}
-            {event.fee > 0 && payment?.status === "pending" && (
+            {applicationFee > 0 && payment?.status === "pending" && (
               <button
                 type="button"
                 onClick={handlePaymentConfirmation}
@@ -1200,7 +1215,21 @@ export default function EventDetailPage() {
             )}
             {(isLoggedIn || guestApplicationOpen) && (
               <>
-                {guestApplicationOpen && !isLoggedIn && (
+                {plans.length > 0 && (
+                  <section className="mb-5 rounded-3xl bg-white p-6 shadow-sm sm:p-8">
+                    <h2 className="text-xl font-bold">参加プラン</h2>
+                    <div className="mt-4 space-y-3">
+                      {plans.map((plan) => (
+                        <label key={plan.id} className={`block cursor-pointer rounded-2xl border-2 p-4 ${selectedPlanId === plan.id ? "border-blue-600 bg-blue-50" : "border-neutral-200"}`}>
+                          <input type="radio" name="event-plan" checked={selectedPlanId === plan.id} onChange={() => setSelectedPlanId(plan.id)} className="mr-3" />
+                          <span className="font-bold">{plan.name}</span><span className="ml-2 text-blue-700">{formatFee(plan.fee)}</span>
+                          {plan.description && <p className="mt-2 whitespace-pre-wrap text-sm text-neutral-500">{plan.description}</p>}
+                          <p className="mt-1 text-xs text-neutral-400">定員：{plan.capacity ?? "無制限"}</p>
+                        </label>
+                      ))}
+                    </div>
+                  </section>
+                )}                {guestApplicationOpen && !isLoggedIn && (
                   <section className="mb-5 rounded-3xl bg-white p-6 shadow-sm sm:p-8">
                     <label className="block text-sm font-bold text-neutral-900">お名前 <span className="text-red-500">必須</span>
                       <input type="text" value={guestName} onChange={(e) => setGuestName(e.target.value)} disabled={processing} className="mt-3 w-full rounded-xl border border-neutral-300 px-4 py-3 font-normal" placeholder="参加者のお名前" />
@@ -1209,7 +1238,7 @@ export default function EventDetailPage() {
                 )}
                 <EventApplicationQuestions questions={questions} answers={answers} disabled={processing} onChange={handleAnswerChange} />
                 {!hasCompletedRequiredQuestions && <p className="mt-4 rounded-2xl bg-orange-50 px-5 py-4 text-sm font-medium text-orange-700">必須の質問に回答すると、参加ボタンを押せるようになります。</p>}
-                <button type="button" onClick={guestApplicationOpen && !isLoggedIn ? handleGuestJoin : handleJoin} disabled={processing || !hasCompletedRequiredQuestions || (guestApplicationOpen && !isLoggedIn && !guestName.trim())} className="mt-5 w-full rounded-xl bg-blue-600 px-5 py-4 font-bold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-neutral-400">
+                <button type="button" onClick={guestApplicationOpen && !isLoggedIn ? handleGuestJoin : handleJoin} disabled={processing || (plans.length > 0 && !selectedPlanId) || !hasCompletedRequiredQuestions || (guestApplicationOpen && !isLoggedIn && !guestName.trim())} className="mt-5 w-full rounded-xl bg-blue-600 px-5 py-4 font-bold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-neutral-400">
                   {processing ? "処理中..." : guestApplicationOpen && !isLoggedIn ? "ゲストとして参加を申し込む" : isFull ? "キャンセル待ちに登録" : "このイベントに参加する"}
                 </button>
                 {guestApplicationOpen && !isLoggedIn && <button type="button" onClick={() => setGuestApplicationOpen(false)} disabled={processing} className="mt-3 w-full px-5 py-3 text-sm font-bold text-neutral-500">参加方法の選択へ戻る</button>}

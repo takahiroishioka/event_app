@@ -52,6 +52,8 @@ type UserEventDatabaseRow = {
   user_id: string;
   status: string;
   created_at: string | null;
+  plan_id: string | null;
+  event_plans: { name: string }[] | null;
 };
 
 type UserRow = {
@@ -61,6 +63,7 @@ type UserRow = {
 
 type UserEventRow = UserEventDatabaseRow & {
   user_name: string | null;
+  plan_name: string | null;
 };
 
 type AnswerRow = {
@@ -281,7 +284,9 @@ export default function AdminEventDetailPage() {
           id,
           user_id,
           status,
-          created_at
+          created_at,
+          plan_id,
+          event_plans(name)
         `)
         .eq("event_id", eventId)
         .order("created_at", {
@@ -389,6 +394,7 @@ export default function AdminEventDetailPage() {
       registrationData.map(
         (registration) => ({
           ...registration,
+          plan_name: registration.event_plans?.[0]?.name ?? null,
           user_name:
             userNameMap.get(
               registration.user_id
@@ -473,6 +479,7 @@ function handleExportCsv() {
   const headers = [
     "参加者名",
     "ユーザーID",
+    "参加プラン",
     "参加状態",
     "申請日時",
     ...questions.map((question) => question.question_text),
@@ -886,7 +893,7 @@ function sanitizeFileName(
         </div>
 
         <div className="mb-6 flex justify-end">
-          <Link href={`/admin/events/${eventId}/questions`} className="rounded-xl bg-blue-600 px-5 py-3 text-sm font-bold text-white transition hover:bg-blue-700">質問を作成・管理</Link>
+          <div className="flex gap-3"><Link href={`/admin/events/${eventId}/plans`} className="rounded-xl bg-white px-5 py-3 text-sm font-bold text-blue-700 shadow-sm">参加プランを管理</Link><Link href={`/admin/events/${eventId}/questions`} className="rounded-xl bg-blue-600 px-5 py-3 text-sm font-bold text-white transition hover:bg-blue-700">質問を作成・管理</Link></div>
         </div>
 
         <header className="rounded-3xl bg-white p-6 shadow-sm sm:p-8">
@@ -1248,6 +1255,8 @@ function sanitizeFileName(
                               {registration.user_name ||
                                 "名前未登録"}
                             </h3>
+
+                            {registration.plan_name && <p className="mt-2 text-sm font-bold text-blue-700">参加プラン：{registration.plan_name}</p>}
 
                             <p className="mt-2 break-all text-xs text-neutral-400">
                               ユーザーID：
