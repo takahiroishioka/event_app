@@ -130,6 +130,7 @@ export default function EventDetailPage() {
     useState<EventAnswers>({});
 
   const [guestApplicationOpen, setGuestApplicationOpen] = useState(false);
+  const [applicationChoiceOpen, setApplicationChoiceOpen] = useState(true);
 
 
   const [loading, setLoading] =
@@ -1216,13 +1217,17 @@ export default function EventDetailPage() {
 
         {canJoin && (
           <div id="application" className="mt-6 scroll-mt-24">
-            {!isLoggedIn && !guestApplicationOpen && (
+            {!isLoggedIn && !guestApplicationOpen && !applicationChoiceOpen && (
+              <button type="button" onClick={() => setApplicationChoiceOpen(true)} className="w-full rounded-xl bg-blue-600 px-5 py-4 font-bold text-white hover:bg-blue-700">参加方法を選択</button>
+            )}
+            {!isLoggedIn && !guestApplicationOpen && applicationChoiceOpen && (
               <section className="rounded-3xl bg-white p-6 shadow-sm sm:p-8">
                 <h2 className="text-2xl font-bold text-neutral-900">参加方法を選択</h2>
-                <p className="mt-3 text-sm text-neutral-500">ゲストで申し込むか、ログインして申し込めます。</p>
-                <div className="mt-6 grid gap-3 sm:grid-cols-2">
-                  <button type="button" onClick={() => setGuestApplicationOpen(true)} className="rounded-xl bg-blue-600 px-5 py-4 font-bold text-white hover:bg-blue-700">ゲストで申し込む</button>
-                  <button type="button" onClick={() => router.push(`/login?redirect=${encodeURIComponent(`/events/${event.id}#application`)}&signup=ubm`)} className="rounded-xl border border-blue-600 bg-white px-5 py-4 font-bold text-blue-700 hover:bg-blue-50">ログインして申し込む</button>
+                <p className="mt-3 text-sm text-neutral-500">ゲストとして申し込むか、ログインして申し込めます。</p>
+                <div className="mt-6 grid gap-3 sm:grid-cols-3">
+                  <button type="button" onClick={() => setGuestApplicationOpen(true)} className="rounded-xl bg-blue-600 px-5 py-4 font-bold text-white hover:bg-blue-700">ゲストとして申し込む</button>
+                  <button type="button" onClick={() => router.push(`/signup/ubm?redirect=${encodeURIComponent(`/events/${event.id}#application`)}`)} className="rounded-xl border border-blue-600 bg-white px-5 py-4 font-bold text-blue-700 hover:bg-blue-50">ログインして申し込む</button>
+                  <button type="button" onClick={() => setApplicationChoiceOpen(false)} className="rounded-xl border border-neutral-300 bg-white px-5 py-4 font-bold text-neutral-600 hover:bg-neutral-50">閉じる</button>
                 </div>
               </section>
             )}
@@ -1246,9 +1251,9 @@ export default function EventDetailPage() {
                 <EventApplicationQuestions questions={questions} answers={answers} disabled={processing} onChange={handleAnswerChange} />
                 {!hasCompletedRequiredQuestions && <p className="mt-4 rounded-2xl bg-orange-50 px-5 py-4 text-sm font-medium text-orange-700">必須の質問に回答すると、参加ボタンを押せるようになります。</p>}
                 <button type="button" onClick={guestApplicationOpen && !isLoggedIn ? handleGuestJoin : handleJoin} disabled={processing || (plans.length > 0 && !selectedPlanId) || !hasCompletedRequiredQuestions} className="mt-5 w-full rounded-xl bg-blue-600 px-5 py-4 font-bold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-neutral-400">
-                  {processing ? "処理中..." : guestApplicationOpen && !isLoggedIn ? "ゲストで申し込む" : isFull ? "キャンセル待ちに登録" : "このイベントに参加する"}
+                  {processing ? "処理中..." : guestApplicationOpen && !isLoggedIn ? "ゲストとして申し込む" : isFull ? "キャンセル待ちに登録" : "このイベントに参加する"}
                 </button>
-                {guestApplicationOpen && !isLoggedIn && <button type="button" onClick={() => setGuestApplicationOpen(false)} disabled={processing} className="mt-3 w-full px-5 py-3 text-sm font-bold text-neutral-500">参加方法の選択へ戻る</button>}
+                {guestApplicationOpen && !isLoggedIn && <button type="button" onClick={() => setGuestApplicationOpen(false)} disabled={processing} className="mt-3 w-full px-5 py-3 text-sm font-bold text-neutral-500">閉じる</button>}
               </>
             )}
           </div>
