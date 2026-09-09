@@ -478,7 +478,7 @@ export default function NewEventPage() {
               question.isRequired,
 
             sort_order:
-              questionIndex + 1,
+              questionIndex + 2,
           })
           .select("id")
           .single();

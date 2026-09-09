@@ -7,7 +7,7 @@ import { createClient } from "@/lib/supabase/client";
 
 type QuestionType = "text" | "textarea" | "single_choice" | "multiple_choice";
 type Option = { option_text: string; sort_order: number };
-type Question = { id:string; question_text:string; question_type:QuestionType; is_required:boolean; sort_order:number; event_question_options:Option[] };
+type Question = { application_field: "name" | "sns" | null; id:string; question_text:string; question_type:QuestionType; is_required:boolean; sort_order:number; event_question_options:Option[] };
 
 const initialOptions = ["", ""];
 
@@ -28,7 +28,7 @@ export default function EventQuestionsPage() {
     const supabase = createClient();
     const [eventResult, questionResult] = await Promise.all([
       supabase.from("events").select("title").eq("id", id).maybeSingle(),
-      supabase.from("event_questions").select("id, question_text, question_type, is_required, sort_order, event_question_options(option_text, sort_order)").eq("event_id", id).order("sort_order"),
+      supabase.from("event_questions").select("id, application_field, question_text, question_type, is_required, sort_order, event_question_options(option_text, sort_order)").eq("event_id", id).order("sort_order"),
     ]);
     if (eventResult.error) { setIsError(true); setMessage(`イベントを取得できませんでした：${eventResult.error.message}`); }
     else if (eventResult.data) setEventTitle(eventResult.data.title);
@@ -92,7 +92,7 @@ export default function EventQuestionsPage() {
         {hasOptions && <div className="mt-4"><p className="text-sm font-bold">選択肢</p>{options.map((option,index)=><div key={index} className="mt-2 flex gap-2"><input value={option} onChange={e=>setOptions(current=>current.map((value,i)=>i===index?e.target.value:value))} placeholder={`選択肢${index+1}`} className="min-w-0 flex-1 rounded-xl border p-3"/><button type="button" disabled={options.length<=2} onClick={()=>setOptions(current=>current.filter((_,i)=>i!==index))} className="rounded-xl border px-3 text-red-600 disabled:opacity-30">削除</button></div>)}<button type="button" onClick={()=>setOptions([...options,""])} className="mt-3 text-sm font-bold text-blue-600">＋ 選択肢を追加</button></div>}
         <button disabled={saving} className="mt-6 w-full rounded-xl bg-blue-600 p-3 font-bold text-white disabled:bg-neutral-300">{saving ? "保存中…" : editingId ? "変更を保存" : "質問を追加する"}</button>{editingId && <button type="button" onClick={resetForm} className="mt-2 w-full rounded-xl border p-3 font-bold">キャンセル</button>}
       </form>
-      <section className="rounded-3xl bg-white p-6 shadow-sm"><h2 className="text-xl font-bold">登録済みの質問</h2><div className="mt-5 space-y-3">{questions.map((question,index)=><article key={question.id} className="rounded-xl border p-4"><p className="font-bold">{index+1}. {question.question_text}{question.is_required&&<span className="ml-2 text-xs text-red-600">必須</span>}</p><p className="mt-2 text-xs text-neutral-500">{formatType(question.question_type)}</p>{question.event_question_options?.length>0&&<ul className="mt-2 list-disc pl-5 text-sm text-neutral-600">{[...question.event_question_options].sort((a,b)=>a.sort_order-b.sort_order).map(option=><li key={option.sort_order}>{option.option_text}</li>)}</ul>}<div className="mt-4 flex gap-3"><button onClick={()=>beginEdit(question)} disabled={saving} className="rounded-lg bg-blue-50 px-4 py-2 text-sm font-bold text-blue-700">編集</button><button onClick={()=>void remove(question)} disabled={saving} className="rounded-lg bg-red-50 px-4 py-2 text-sm font-bold text-red-700">削除</button></div></article>)}{questions.length===0&&<p className="text-sm text-neutral-500">質問はまだありません。</p>}</div></section>
+      <section className="rounded-3xl bg-white p-6 shadow-sm"><h2 className="text-xl font-bold">登録済みの質問</h2><div className="mt-5 space-y-3">{questions.map((question,index)=><article key={question.id} className="rounded-xl border p-4"><p className="font-bold">{index+1}. {question.question_text}{question.is_required&&<span className="ml-2 text-xs text-red-600">必須</span>}</p><p className="mt-2 text-xs text-neutral-500">{formatType(question.question_type)}</p>{question.event_question_options?.length>0&&<ul className="mt-2 list-disc pl-5 text-sm text-neutral-600">{[...question.event_question_options].sort((a,b)=>a.sort_order-b.sort_order).map(option=><li key={option.sort_order}>{option.option_text}</li>)}</ul>}{!question.application_field && <div className="mt-4 flex gap-3"><button onClick={()=>beginEdit(question)} disabled={saving} className="rounded-lg bg-blue-50 px-4 py-2 text-sm font-bold text-blue-700">編集</button><button onClick={()=>void remove(question)} disabled={saving} className="rounded-lg bg-red-50 px-4 py-2 text-sm font-bold text-red-700">削除</button></div>}</article>)}{questions.length===0&&<p className="text-sm text-neutral-500">質問はまだありません。</p>}</div></section>
     </div>
   </div></main>;
 }

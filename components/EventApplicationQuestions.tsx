@@ -13,6 +13,7 @@ export type QuestionOption = {
 };
 
 export type EventQuestion = {
+  application_field?: "name" | "sns" | null;
   id: string;
   question_text: string;
   question_type: QuestionType;
@@ -119,6 +120,9 @@ function QuestionField({
         {question.question_type === "text" && (
           <input
             type="text"
+            required={question.is_required}
+            maxLength={question.application_field === "name" ? 100 : undefined}
+            aria-label={question.question_text}
             value={
               typeof value === "string"
                 ? value

@@ -56,6 +56,7 @@ type PaymentData = {
 
 type QuestionRow = {
   id: string;
+  application_field: "name" | "sns" | null;
   question_text: string;
   question_type: QuestionType;
   is_required: boolean;
@@ -129,7 +130,7 @@ export default function EventDetailPage() {
     useState<EventAnswers>({});
 
   const [guestApplicationOpen, setGuestApplicationOpen] = useState(false);
-  const [guestName, setGuestName] = useState("");
+
 
   const [loading, setLoading] =
     useState(true);
@@ -340,6 +341,7 @@ export default function EventDetailPage() {
         .from("event_questions")
         .select(`
           id,
+          application_field,
           question_text,
           question_type,
           is_required,
@@ -440,6 +442,13 @@ export default function EventDetailPage() {
           })
         );
 
+      const nameQuestion = typedQuestions.find((question) => question.application_field === "name");
+      if (user && nameQuestion) {
+        const { data: profile, error: profileError } = await supabase.from("users").select("name").eq("id", user.id).maybeSingle();
+        if (profileError) console.error("プロフィール取得エラー:", profileError);
+        setAnswers((current) => ({ ...current, [nameQuestion.id]: current[nameQuestion.id] ?? profile?.name ?? "" }));
+      }
+      if (!user) setAnswers({});
       setQuestions(formattedQuestions);
       setLoading(false);
     },
@@ -643,7 +652,9 @@ export default function EventDetailPage() {
 
   async function handleGuestJoin() {
     if (!event) return;
-    const normalizedName = guestName.trim();
+    const nameQuestion = questions.find((question) => question.application_field === "name");
+    const nameAnswer = nameQuestion ? answers[nameQuestion.id] : "";
+    const normalizedName = typeof nameAnswer === "string" ? nameAnswer.trim() : "";
     setMessage("");
     setIsError(false);
     if (!normalizedName) { setIsError(true); setMessage("お名前を入力してください。"); return; }
@@ -1208,9 +1219,9 @@ export default function EventDetailPage() {
             {!isLoggedIn && !guestApplicationOpen && (
               <section className="rounded-3xl bg-white p-6 shadow-sm sm:p-8">
                 <h2 className="text-2xl font-bold text-neutral-900">参加方法を選択</h2>
-                <p className="mt-3 text-sm text-neutral-500">ゲストとして申し込むか、ログインして申し込めます。</p>
+                <p className="mt-3 text-sm text-neutral-500">ゲストで申し込むか、ログインして申し込めます。</p>
                 <div className="mt-6 grid gap-3 sm:grid-cols-2">
-                  <button type="button" onClick={() => setGuestApplicationOpen(true)} className="rounded-xl bg-blue-600 px-5 py-4 font-bold text-white hover:bg-blue-700">ゲストとして申し込む</button>
+                  <button type="button" onClick={() => setGuestApplicationOpen(true)} className="rounded-xl bg-blue-600 px-5 py-4 font-bold text-white hover:bg-blue-700">ゲストで申し込む</button>
                   <button type="button" onClick={() => router.push(`/login?redirect=${encodeURIComponent(`/events/${event.id}#application`)}&signup=ubm`)} className="rounded-xl border border-blue-600 bg-white px-5 py-4 font-bold text-blue-700 hover:bg-blue-50">ログインして申し込む</button>
                 </div>
               </section>
@@ -1231,17 +1242,11 @@ export default function EventDetailPage() {
                       ))}
                     </div>
                   </section>
-                )}                {guestApplicationOpen && !isLoggedIn && (
-                  <section className="mb-5 rounded-3xl bg-white p-6 shadow-sm sm:p-8">
-                    <label className="block text-sm font-bold text-neutral-900">お名前 <span className="text-red-500">必須</span>
-                      <input type="text" value={guestName} onChange={(e) => setGuestName(e.target.value)} disabled={processing} className="mt-3 w-full rounded-xl border border-neutral-300 px-4 py-3 font-normal" placeholder="参加者のお名前" />
-                    </label>
-                  </section>
                 )}
                 <EventApplicationQuestions questions={questions} answers={answers} disabled={processing} onChange={handleAnswerChange} />
                 {!hasCompletedRequiredQuestions && <p className="mt-4 rounded-2xl bg-orange-50 px-5 py-4 text-sm font-medium text-orange-700">必須の質問に回答すると、参加ボタンを押せるようになります。</p>}
-                <button type="button" onClick={guestApplicationOpen && !isLoggedIn ? handleGuestJoin : handleJoin} disabled={processing || (plans.length > 0 && !selectedPlanId) || !hasCompletedRequiredQuestions || (guestApplicationOpen && !isLoggedIn && !guestName.trim())} className="mt-5 w-full rounded-xl bg-blue-600 px-5 py-4 font-bold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-neutral-400">
-                  {processing ? "処理中..." : guestApplicationOpen && !isLoggedIn ? "ゲストとして参加を申し込む" : isFull ? "キャンセル待ちに登録" : "このイベントに参加する"}
+                <button type="button" onClick={guestApplicationOpen && !isLoggedIn ? handleGuestJoin : handleJoin} disabled={processing || (plans.length > 0 && !selectedPlanId) || !hasCompletedRequiredQuestions} className="mt-5 w-full rounded-xl bg-blue-600 px-5 py-4 font-bold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-neutral-400">
+                  {processing ? "処理中..." : guestApplicationOpen && !isLoggedIn ? "ゲストで申し込む" : isFull ? "キャンセル待ちに登録" : "このイベントに参加する"}
                 </button>
                 {guestApplicationOpen && !isLoggedIn && <button type="button" onClick={() => setGuestApplicationOpen(false)} disabled={processing} className="mt-3 w-full px-5 py-3 text-sm font-bold text-neutral-500">参加方法の選択へ戻る</button>}
               </>
