@@ -35,7 +35,7 @@ export default function UserProfilePage() {
       const supabase = createClient();
       const [auth, person, posts] = await Promise.all([
         supabase.auth.getUser(),
-        supabase.from("users").select("name,bio,avatar_path").eq("id", id).maybeSingle(),
+        supabase.rpc("get_public_voice_profile", { p_user_id: id }).maybeSingle(),
         supabase.from("voice_posts").select("id,user_id,line_id,audio_url,storage_path,note,created_at").eq("user_id", id).order("created_at", { ascending: false }),
       ]);
       if (person.error) throw person.error;
@@ -50,8 +50,8 @@ export default function UserProfilePage() {
       if (likeResult.error) throw likeResult.error;
       if (version !== requestVersion.current) return;
       setUid(auth.data.user?.id ?? null);
-      setProfile(person.data);
-      setBio(person.data?.bio ?? "");
+      setProfile(person.data as Profile | null);
+      setBio((person.data as Profile | null)?.bio ?? "");
       setVoices(rows);
       setLines(Object.fromEntries((lineResult.data ?? []).map((line) => [line.id, line])));
       setLikes((likeResult.data ?? []).reduce<Record<string, number>>((counts, like) => {

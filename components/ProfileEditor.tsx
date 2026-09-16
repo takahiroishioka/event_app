@@ -5,9 +5,9 @@ import { createClient } from "@/lib/supabase/client";
 
 const imageTypes: Record<string, string> = { "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp" };
 
-export function ProfileIcon({ name, path }: { name: string; path: string | null }) {
+export function ProfileIcon({ name, path, small = false }: { name: string; path: string | null; small?: boolean }) {
   const url = path ? createClient().storage.from("profile-icons").getPublicUrl(path).data.publicUrl : null;
-  return <div className="flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-full border-4 border-white bg-blue-100 text-3xl font-bold text-blue-700">
+  return <div className={`flex shrink-0 items-center justify-center overflow-hidden rounded-full border-white bg-blue-100 font-bold text-blue-700 ${small ? "h-10 w-10 border-2 text-base" : "h-24 w-24 border-4 text-3xl"}`}>
     {/* User-uploaded images are served directly from public storage. */}
     {/* eslint-disable-next-line @next/next/no-img-element */}
     {url ? <img src={url} alt={`${name || "ユーザー"}のアイコン`} className="h-full w-full object-cover" /> : name.slice(0, 1) || "人"}
