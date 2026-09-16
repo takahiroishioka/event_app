@@ -129,6 +129,7 @@ export default function EventDetailPage() {
   const [answers, setAnswers] =
     useState<EventAnswers>({});
 
+  const [questionsReady, setQuestionsReady] = useState(false);
   const [guestApplicationOpen, setGuestApplicationOpen] = useState(false);
   const [applicationChoiceOpen, setApplicationChoiceOpen] = useState(true);
 
@@ -148,6 +149,8 @@ export default function EventDetailPage() {
   const loadEvent = useCallback(
     async function loadEvent() {
       setLoading(true);
+      setQuestionsReady(false);
+      setQuestions([]);
       setMessage("");
       setIsError(false);
 
@@ -451,6 +454,10 @@ export default function EventDetailPage() {
       }
       if (!user) setAnswers({});
       setQuestions(formattedQuestions);
+      setQuestionsReady(
+        formattedQuestions.some((question) => question.application_field === "name") &&
+        formattedQuestions.some((question) => question.application_field === "sns")
+      );
       setLoading(false);
     },
     [eventId, router]
@@ -501,7 +508,7 @@ export default function EventDetailPage() {
     }, [answers, questions]);
 
   const hasCompletedRequiredQuestions =
-    unansweredRequiredQuestions.length === 0;
+    questionsReady && unansweredRequiredQuestions.length === 0;
 
   const isFull =
     event?.capacity !== null &&
@@ -1248,8 +1255,16 @@ export default function EventDetailPage() {
                     </div>
                   </section>
                 )}
-                <EventApplicationQuestions questions={questions} answers={answers} disabled={processing} onChange={handleAnswerChange} />
-                {!hasCompletedRequiredQuestions && <p className="mt-4 rounded-2xl bg-orange-50 px-5 py-4 text-sm font-medium text-orange-700">必須の質問に回答すると、参加ボタンを押せるようになります。</p>}
+                {questionsReady ? (
+                  <EventApplicationQuestions questions={questions} answers={answers} disabled={processing} onChange={handleAnswerChange} />
+                ) : (
+                  <section role="alert" className="rounded-3xl border border-orange-200 bg-white p-6 text-neutral-900 shadow-sm sm:p-8">
+                    <h2 className="text-xl font-bold">申込みフォームを読み込めませんでした</h2>
+                    <p className="mt-3 text-sm leading-6">名前・SNSアドレスなどの入力欄を取得できませんでした。再読み込みしても表示されない場合は、主催者にお問い合わせください。</p>
+                    <button type="button" onClick={() => void loadEvent()} disabled={processing} className="mt-4 rounded-xl bg-blue-700 px-5 py-3 font-bold text-white disabled:bg-neutral-500">再読み込み</button>
+                  </section>
+                )}
+                {questionsReady && !hasCompletedRequiredQuestions && <p className="mt-4 rounded-2xl bg-orange-50 px-5 py-4 text-sm font-medium text-orange-700">必須の質問に回答すると、参加ボタンを押せるようになります。</p>}
                 <button type="button" onClick={guestApplicationOpen && !isLoggedIn ? handleGuestJoin : handleJoin} disabled={processing || (plans.length > 0 && !selectedPlanId) || !hasCompletedRequiredQuestions} className="mt-5 w-full rounded-xl bg-blue-600 px-5 py-4 font-bold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-neutral-400">
                   {processing ? "処理中..." : guestApplicationOpen && !isLoggedIn ? "ゲストとして申し込む" : isFull ? "キャンセル待ちに登録" : "このイベントに参加する"}
                 </button>
