@@ -1,0 +1,98 @@
+"use client";
+
+import { useEffect, useRef, useState, type FormEvent } from "react";
+import { createClient } from "@/lib/supabase/client";
+
+const imageTypes: Record<string, string> = { "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp" };
+
+export function ProfileIcon({ name, path }: { name: string; path: string | null }) {
+  const url = path ? createClient().storage.from("profile-icons").getPublicUrl(path).data.publicUrl : null;
+  return <div className="flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-full border-4 border-white bg-blue-100 text-3xl font-bold text-blue-700">
+    {/* User-uploaded images are served directly from public storage. */}
+    {/* eslint-disable-next-line @next/next/no-img-element */}
+    {url ? <img src={url} alt={`${name || "ユーザー"}のアイコン`} className="h-full w-full object-cover" /> : name.slice(0, 1) || "人"}
+  </div>;
+}
+
+export default function ProfileEditor({ userId, name, avatarPath, onSaved }: {
+  userId: string; name: string; avatarPath: string | null;
+  onSaved: (name: string, path: string | null) => void;
+}) {
+  const [draftName, setDraftName] = useState(name);
+  const [file, setFile] = useState<File | null>(null);
+  const [preview, setPreview] = useState<string | null>(null);
+  const [removeIcon, setRemoveIcon] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState("");
+  const [error, setError] = useState(false);
+  const input = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    if (!preview) return;
+    return () => URL.revokeObjectURL(preview);
+  }, [preview]);
+
+  async function save(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (saving) return;
+    const normalizedName = draftName.trim();
+    setMessage(""); setError(false);
+    if (!normalizedName || normalizedName.length > 100) { setError(true); setMessage("名前は1〜100文字で入力してください。"); return; }
+    setSaving(true);
+    const supabase = createClient();
+    let uploaded: string | null = null;
+    let committed = false;
+    try {
+      let nextPath = removeIcon ? null : avatarPath;
+      if (file) {
+        if (!imageTypes[file.type] || file.size > 5 * 1024 * 1024) throw new Error("JPEG・PNG・WebP形式の5MB以下の画像を選んでください。");
+        const path = `${userId}/${crypto.randomUUID()}.${imageTypes[file.type]}`;
+        const { error } = await supabase.storage.from("profile-icons").upload(path, file, { contentType: file.type, upsert: false });
+        if (error) throw error;
+        uploaded = path; nextPath = path;
+      }
+      const { error } = await supabase.rpc("update_own_profile", { p_name: normalizedName, p_avatar_path: nextPath });
+      if (error) throw error;
+      committed = true;
+      onSaved(normalizedName, nextPath);
+      setDraftName(normalizedName); setFile(null); setPreview(null); setRemoveIcon(false);
+      if (input.current) input.current.value = "";
+      setMessage("プロフィールを保存しました。");
+      if (avatarPath && avatarPath !== nextPath && avatarPath.startsWith(`${userId}/`)) {
+        const { error: cleanupError } = await supabase.storage.from("profile-icons").remove([avatarPath]);
+        if (cleanupError) console.error("旧アイコンの削除に失敗:", cleanupError);
+      }
+    } catch (cause) {
+      if (!committed) {
+        if (uploaded) await supabase.storage.from("profile-icons").remove([uploaded]).catch(console.error);
+        setError(true); setMessage(`保存できませんでした：${cause instanceof Error ? cause.message : (cause as { message?: string })?.message || "通信状態を確認してください。"}`);
+      }
+    } finally { setSaving(false); }
+  }
+
+  return <section className="mb-8 rounded-3xl bg-white p-6 shadow-sm sm:p-8">
+    <h2 className="text-xl font-bold text-neutral-900">プロフィール設定</h2>
+    <p className="mt-2 text-sm text-neutral-500">名前とアイコンは公開プロフィールにも表示されます。</p>
+    <form onSubmit={save} className="mt-5 space-y-5">
+      <fieldset disabled={saving} className="space-y-5 disabled:opacity-60">
+        <div className="flex flex-wrap items-center gap-4">
+          {file && preview ? <div className="h-24 w-24 overflow-hidden rounded-full">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={preview} alt="選択したアイコンのプレビュー" className="h-full w-full object-cover" />
+          </div> : <ProfileIcon name={draftName} path={removeIcon ? null : avatarPath} />}
+          <div className="min-w-0 flex-1"><label className="block text-sm font-bold">アイコン画像
+            <input ref={input} type="file" accept="image/jpeg,image/png,image/webp" className="mt-2 block w-full text-sm" onChange={(e) => {
+              const selected = e.target.files?.[0]; if (!selected) return;
+              setMessage(""); setError(false);
+              if (!imageTypes[selected.type] || selected.size > 5 * 1024 * 1024) { setError(true); setMessage("JPEG・PNG・WebP形式の5MB以下の画像を選んでください。"); e.target.value = ""; return; }
+              setPreview(URL.createObjectURL(selected)); setFile(selected); setRemoveIcon(false);
+            }} />
+          </label><p className="mt-2 text-xs text-neutral-500">JPEG・PNG・WebP、5MB以下。中央を正方形に切り抜いて表示します。</p>
+          {(avatarPath || file) && <button type="button" className="mt-2 text-sm text-red-600 underline" onClick={() => { setFile(null); setPreview(null); setRemoveIcon(true); if (input.current) input.current.value = ""; }}>アイコンを削除する</button>}</div>
+        </div>
+        <label className="block text-sm font-bold">名前 <span className="text-red-600">必須</span><input value={draftName} onChange={(e) => setDraftName(e.target.value)} required maxLength={100} autoComplete="name" className="mt-2 block w-full rounded-xl border border-neutral-300 px-4 py-3 font-normal" /></label>
+        <button type="submit" disabled={!draftName.trim()} className="rounded-xl bg-blue-600 px-5 py-3 font-bold text-white disabled:bg-neutral-400">{saving ? "保存中…" : "プロフィールを保存"}</button>
+      </fieldset>
+      {message && <p role={error ? "alert" : "status"} className={`text-sm ${error ? "text-red-600" : "text-green-700"}`}>{message}</p>}
+    </form>
+  </section>;
+}
