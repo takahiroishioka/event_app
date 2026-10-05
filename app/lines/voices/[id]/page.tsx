@@ -16,7 +16,7 @@ const getVoice = cache(async (id: string) => {
   if (error) throw error;
   if (!voice) return null;
   const [lineResult, authorResult] = await Promise.all([
-    supabase.from("voice_lines").select("id, title, body, direction")
+    supabase.from("voice_lines").select("id, title, body")
       .eq("id", voice.line_id).eq("status", "published").maybeSingle(),
     supabase.rpc("get_public_voice_profile", { p_user_id: voice.user_id }).maybeSingle(),
   ]);
@@ -58,13 +58,12 @@ export default async function VoicePage({ params }: Props) {
           </Link>
           <ShareLinkButton path={`/lines/voices/${voice.id}`} />
         </div>
-        <h1 className="mt-7 break-words text-2xl font-black sm:text-3xl">{line.title}</h1>
+        <h1 className="mt-7 break-words text-2xl font-black sm:text-3xl"><Link href={`/lines/${line.id}`} className="text-blue-700 hover:underline">{line.title}</Link></h1>
         <audio controls preload="metadata" src={voice.audio_url} aria-label={`${authorName}の投稿音声`} className="mt-6 w-full" />
         {voice.note && <p className="mt-5 whitespace-pre-wrap break-words text-sm leading-7 text-neutral-700">{voice.note}</p>}
       </div>
       <section className="p-6 sm:p-10"><h2 className="text-sm font-bold text-neutral-500">セリフ</h2>
         <blockquote className="mt-4 whitespace-pre-wrap break-words text-lg leading-8">「{line.body}」</blockquote>
-        {line.direction && <p className="mt-5 whitespace-pre-wrap text-sm leading-7 text-neutral-600">{line.direction}</p>}
         <Link href={`/lines/${line.id}#voice-${voice.id}`} className="mt-6 inline-block rounded-xl border px-5 py-3 text-sm font-bold text-blue-700">いいね・コメントを見る</Link>
       </section>
     </article>

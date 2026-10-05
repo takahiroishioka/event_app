@@ -94,7 +94,7 @@ export default function VoiceTimeline() {
       const author = authors[voice.user_id];
       return <article key={voice.id} className="rounded-3xl bg-white p-5 shadow-sm sm:p-7">
         <div className="flex items-start justify-between gap-3"><Link href={`/users/${voice.user_id}`} className="flex min-w-0 items-center gap-3"><ProfileIcon small name={author?.name || "投稿者"} path={author?.avatar_path ?? null} /><div className="min-w-0"><p className="break-words text-sm font-bold">{author?.name || "投稿者"}</p><time dateTime={voice.created_at} className="mt-1 block text-xs text-neutral-400">{new Date(voice.created_at).toLocaleString("ja-JP", { timeZone: "Asia/Tokyo", year: "numeric", month: "long", day: "numeric", hour: "2-digit", minute: "2-digit" })}</time></div></Link><ShareLinkButton path={`/lines/voices/${voice.id}`} /></div>
-        <Link href={`/lines/voices/${voice.id}`} className="mt-5 block text-lg font-bold text-blue-700 hover:underline">{line?.title || "この声を聴く"}</Link>
+        <Link href={`/lines/${voice.line_id}`} className="mt-5 block text-lg font-bold text-blue-700 hover:underline">{line?.title || "セリフを見る"}</Link>
         {line?.body && <p className="mt-3 line-clamp-3 whitespace-pre-wrap break-words rounded-xl bg-neutral-50 p-4 text-sm leading-7 text-neutral-600">「{line.body}」</p>}
         <audio controls preload="none" src={voice.audio_url} aria-label={`${author?.name || "投稿者"}の投稿音声`} className="mt-4 w-full" />
         {voice.note && <p className="mt-4 whitespace-pre-wrap break-words text-sm leading-7 text-neutral-700">{voice.note}</p>}
