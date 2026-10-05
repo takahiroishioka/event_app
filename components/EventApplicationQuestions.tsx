@@ -1,6 +1,6 @@
 "use client";
 
-import { getVisibleApplicationQuestions } from "@/lib/event-application-identity";
+import { getApplicationQuestionLabel, getVisibleApplicationQuestions } from "@/lib/event-application-identity";
 
 export type QuestionType =
   | "text"
@@ -109,7 +109,7 @@ function QuestionField({
           {questionNumber}.
         </span>
 
-        {question.question_text}
+        {getApplicationQuestionLabel(question)}
 
         {question.is_required && (
           <span className="ml-2 rounded bg-red-50 px-2 py-0.5 text-xs font-bold text-red-600">
@@ -124,7 +124,7 @@ function QuestionField({
             type="text"
             required={question.is_required}
             maxLength={question.application_field === "name" ? 100 : undefined}
-            aria-label={question.question_text}
+            aria-label={getApplicationQuestionLabel(question)}
             value={
               typeof value === "string"
                 ? value

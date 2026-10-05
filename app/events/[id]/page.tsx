@@ -453,6 +453,10 @@ export default function EventDetailPage() {
         if (profileError) console.error("プロフィール取得エラー:", profileError);
         setAnswers((current) => setApplicationAnswer(typedQuestions, current, nameQuestion.id, current[nameQuestion.id] ?? profile?.name ?? ""));
       }
+      const contactQuestion = typedQuestions.find((question) => question.application_field === "sns");
+      if (user && contactQuestion) {
+        setAnswers((current) => setApplicationAnswer(typedQuestions, current, contactQuestion.id, current[contactQuestion.id] ?? user.email ?? ""));
+      }
       if (!user) setAnswers({});
       setQuestions(formattedQuestions);
       setQuestionsReady(
@@ -1258,7 +1262,7 @@ export default function EventDetailPage() {
                 ) : (
                   <section role="alert" className="rounded-3xl border border-orange-200 bg-white p-6 text-neutral-900 shadow-sm sm:p-8">
                     <h2 className="text-xl font-bold">申込みフォームを読み込めませんでした</h2>
-                    <p className="mt-3 text-sm leading-6">名前・SNSアドレスなどの入力欄を取得できませんでした。再読み込みしても表示されない場合は、主催者にお問い合わせください。</p>
+                    <p className="mt-3 text-sm leading-6">名前・メールアドレス/連絡の取れるSNSアカウントリンクなどの入力欄を取得できませんでした。再読み込みしても表示されない場合は、主催者にお問い合わせください。</p>
                     <button type="button" onClick={() => void loadEvent()} disabled={processing} className="mt-4 rounded-xl bg-blue-700 px-5 py-3 font-bold text-white disabled:bg-neutral-500">再読み込み</button>
                   </section>
                 )}

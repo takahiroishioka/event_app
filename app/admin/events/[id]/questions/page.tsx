@@ -4,6 +4,7 @@ import Link from "next/link";
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { getApplicationQuestionLabel } from "@/lib/event-application-identity";
 
 type QuestionType = "text" | "textarea" | "single_choice" | "multiple_choice";
 type Option = { option_text: string; sort_order: number };
@@ -33,7 +34,7 @@ export default function EventQuestionsPage() {
     if (eventResult.error) { setIsError(true); setMessage(`イベントを取得できませんでした：${eventResult.error.message}`); }
     else if (eventResult.data) setEventTitle(eventResult.data.title);
     if (questionResult.error) { setIsError(true); setMessage(`質問を取得できませんでした：${questionResult.error.message}`); }
-    else setQuestions((questionResult.data ?? []) as Question[]);
+    else setQuestions(((questionResult.data ?? []) as Question[]).map((question) => ({ ...question, question_text: getApplicationQuestionLabel(question) })));
   }, [id]);
 
   useEffect(() => { const timer = window.setTimeout(() => void load(), 0); return () => window.clearTimeout(timer); }, [load]);

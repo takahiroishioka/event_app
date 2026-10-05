@@ -13,6 +13,7 @@ import { useParams, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import AdminImageManager from "@/components/AdminImageManager";
 import AdminEventManagers from "@/components/AdminEventManagers";
+import { getApplicationQuestionLabel } from "@/lib/event-application-identity";
 
 const supabase = createClient();
 
@@ -40,6 +41,7 @@ type EventData = {
 };
 
 type QuestionRow = {
+  application_field: "name" | "sns" | null;
   id: string;
   question_text: string;
   question_type: string;
@@ -270,6 +272,7 @@ export default function AdminEventDetailPage() {
         .from("event_questions")
         .select(`
           id,
+          application_field,
           question_text,
           question_type,
           is_required,
@@ -337,7 +340,7 @@ export default function AdminEventDetailPage() {
 
     const guestData = (guestResult.data ?? []) as Array<Omit<UserEventDatabaseRow, "user_id"> & { guest_name: string }>;
 
-    setQuestions(questionData);
+    setQuestions(questionData.map((question) => ({ ...question, question_text: getApplicationQuestionLabel(question) })));
 
     /*
      * 参加者のuser_idからusers.nameを取得

@@ -1,5 +1,11 @@
 type IdentityField = "name" | "sns";
 
+export const contactQuestionLabel = "メールアドレス/連絡の取れるSNSアカウントリンク";
+
+export function getApplicationQuestionLabel(question: { application_field?: IdentityField | null; question_text: string }): string {
+  return question.application_field === "sns" ? contactQuestionLabel : question.question_text;
+}
+
 type Question = {
   id: string;
   application_field?: IdentityField | null;
@@ -9,7 +15,7 @@ type Question = {
 
 const legacyLabels: Record<IdentityField, readonly string[]> = {
   name: ["名前", "お名前"],
-  sns: ["連絡の取れるSNSアドレス", "連絡用アカウント"],
+  sns: ["連絡の取れるSNSアドレス", "連絡用アカウント", contactQuestionLabel],
 };
 
 function identityField(question: Question): IdentityField | undefined {
