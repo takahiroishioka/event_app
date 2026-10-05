@@ -48,7 +48,7 @@ export async function proxy(request: NextRequest) {
     pathname === "/" ||
     isPublicEventDetail ||
     pathname === "/lines" ||
-    pathname.startsWith("/lines/") ||
+    (pathname.startsWith("/lines/") && pathname !== "/lines/mypage" && pathname !== "/lines/mypage/") ||
     pathname.startsWith("/users/") ||
     pathname.startsWith("/login") ||
     pathname.startsWith("/signup") ||
@@ -74,8 +74,11 @@ export async function proxy(request: NextRequest) {
   ) {
     const mypageUrl = request.nextUrl.clone();
 
-    mypageUrl.pathname = "/mypage";
-    mypageUrl.search = "";
+    const requestedPath = request.nextUrl.searchParams.get("redirect") ?? "/mypage";
+    const safeRedirect = requestedPath?.startsWith("/") && !requestedPath.startsWith("//") && !requestedPath.includes("\\");
+    const destination = new URL(safeRedirect ? requestedPath : "/mypage", request.url);
+    mypageUrl.pathname = destination.pathname;
+    mypageUrl.search = destination.search;
 
     return NextResponse.redirect(mypageUrl);
   }

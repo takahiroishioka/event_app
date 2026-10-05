@@ -6,7 +6,6 @@ import { useRouter } from "next/navigation";
 import type { User } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/client";
 import SiteHeader from "@/components/SiteHeader";
-import ProfileEditor, { ProfileIcon } from "@/components/ProfileEditor";
 import BannerSection, { type Banner } from "@/components/BannerSection";
 import SocialFooter from "@/components/SocialFooter";
 import { attachEventPreviewImages } from "@/lib/event-images";
@@ -53,9 +52,6 @@ export default function MyPage() {
   const router = useRouter();
 
   const [user, setUser] = useState<User | null>(null);
-  const [userName, setUserName] = useState("");
-  const [avatarPath, setAvatarPath] = useState<string | null>(null);
-  const [profileLoaded, setProfileLoaded] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const [isUbm, setIsUbm] = useState(false);
   const [canManageEvents, setCanManageEvents] = useState(false);
@@ -87,30 +83,6 @@ export default function MyPage() {
       }
 
       setUser(user);
-
-      /*
-       * public.usersから名前を取得
-       */
-      const { data: profile, error: profileError } = await supabase
-        .from("users")
-        .select("name, avatar_path")
-        .eq("id", user.id)
-        .maybeSingle();
-
-      if (profileError) {
-        console.error("プロフィール取得エラー:", profileError);
-      }
-
-      const displayName =
-        profile?.name ||
-        user.user_metadata?.name ||
-        user.user_metadata?.full_name ||
-        user.email?.split("@")[0] ||
-        "";
-
-      setUserName(displayName);
-      setAvatarPath(profile?.avatar_path ?? null);
-      setProfileLoaded(!profileError && Boolean(profile));
 
       const { data: taskRows, error: taskError } = await supabase
         .from("event_tasks")
@@ -383,11 +355,8 @@ export default function MyPage() {
                 マイページ
               </p>
 
-              <div className="mt-3"><ProfileIcon name={userName} path={avatarPath} /></div>
               <h1 className="mt-2 text-3xl font-bold text-neutral-900">
-                {userName
-                  ? `${userName}さん、ようこそ`
-                  : "ようこそ"}
+                イベントのマイページ
               </h1>
 
               <p className="mt-3 text-sm text-neutral-500">
@@ -396,7 +365,6 @@ export default function MyPage() {
             </div>
 
             <div className="flex flex-wrap gap-3">
-              {user && <Link href={`/users/${user.id}`} className="rounded-xl border border-blue-200 bg-blue-50 px-5 py-3 text-sm font-bold text-blue-700 hover:bg-blue-100">こえらぼの自分の投稿</Link>}
               {isAdmin && (
                 <Link
                   href="/admin"
@@ -419,7 +387,6 @@ export default function MyPage() {
             </div>
           </div>
         </header>
-        {user && profileLoaded ? <ProfileEditor userId={user.id} name={userName} avatarPath={avatarPath} onSaved={(name, path) => { setUserName(name); setAvatarPath(path); }} /> : <p role="alert" className="mb-6 text-sm text-red-600">プロフィール設定を読み込めませんでした。時間をおいて再読み込みしてください。</p>}
 
         {errorMessage && (
           <p className="mb-6 rounded-2xl bg-red-50 px-5 py-4 text-sm text-red-700">

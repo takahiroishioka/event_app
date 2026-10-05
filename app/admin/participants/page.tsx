@@ -11,13 +11,14 @@ type Registration = { id: string; user_id: string; event_id: string; status: str
 type UserRow = { id: string; name: string; email: string | null };
 type EventRow = { id: string; title: string; fee: number; start_at: string | null };
 type PaymentRow = { id: string; user_event_id: string; amount: number; status: string; method: string | null };
-type ParticipantRow = Registration & { userName: string; eventTitle: string; eventFee: number; eventStartAt: string | null; payment: PaymentRow | null };
+type GuestRegistration = Omit<Registration, "user_id"> & { guest_name: string };
+type ParticipantRow = Omit<Registration, "user_id"> & { kind: "user" | "guest"; userName: string; eventTitle: string; eventFee: number; eventStartAt: string | null; payment: PaymentRow | null };
 
 export default function AdminParticipantsPage() {
   const router = useRouter();
   const [participants, setParticipants] = useState<ParticipantRow[]>([]);
   const [search, setSearch] = useState("");
-  const [paymentFilter, setPaymentFilter] = useState<"unpaid" | "all">("unpaid");
+  const [paymentFilter, setPaymentFilter] = useState<"unpaid" | "all">("all");
   const [eventFilter, setEventFilter] = useState("");
   const [sortBy, setSortBy] = useState<"event_date" | "user">("event_date");
   const [loading, setLoading] = useState(true);
@@ -40,10 +41,14 @@ export default function AdminParticipantsPage() {
       return;
     }
 
-    const { data: registrationData, error } = await supabase
+    const [registrationResult, guestResult] = await Promise.all([supabase
       .from("user_events")
       .select("id, user_id, event_id, status, created_at")
-      .order("created_at", { ascending: false });
+      .order("created_at", { ascending: false }),
+      supabase.from("guest_event_registrations").select("id, guest_name, event_id, status, created_at").order("created_at", { ascending: false }),
+    ]);
+    const { data: registrationData } = registrationResult;
+    const error = registrationResult.error || guestResult.error;
     if (error) {
       setMessage(`参加者を取得できませんでした：${error.message}`);
       setLoading(false);
@@ -51,8 +56,9 @@ export default function AdminParticipantsPage() {
     }
 
     const registrations = (registrationData ?? []) as Registration[];
+    const guests = (guestResult.data ?? []) as GuestRegistration[];
     const userIds = [...new Set(registrations.map((row) => row.user_id))];
-    const eventIds = [...new Set(registrations.map((row) => row.event_id))];
+    const eventIds = [...new Set([...registrations, ...guests].map((row) => row.event_id))];
     const registrationIds = registrations.map((row) => row.id);
     const [usersResult, eventsResult, paymentsResult] = await Promise.all([
       userIds.length ? supabase.from("users").select("id, name, email").in("id", userIds) : Promise.resolve({ data: [], error: null }),
@@ -68,14 +74,23 @@ export default function AdminParticipantsPage() {
     const users = new Map(((usersResult.data ?? []) as UserRow[]).map((row) => [row.id, row]));
     const events = new Map(((eventsResult.data ?? []) as EventRow[]).map((row) => [row.id, row]));
     const payments = new Map(((paymentsResult.data ?? []) as PaymentRow[]).map((row) => [row.user_event_id, row]));
-    setParticipants(registrations.map((registration) => ({
+    setParticipants([...registrations.map((registration): ParticipantRow => ({
       ...registration,
+      kind: "user",
       userName: users.get(registration.user_id)?.name || "名前未登録",
       eventTitle: events.get(registration.event_id)?.title || "イベント不明",
       eventFee: events.get(registration.event_id)?.fee ?? 0,
       eventStartAt: events.get(registration.event_id)?.start_at ?? null,
       payment: payments.get(registration.id) ?? null,
-    })));
+    })), ...guests.map((registration): ParticipantRow => ({
+      ...registration,
+      kind: "guest",
+      userName: registration.guest_name,
+      eventTitle: events.get(registration.event_id)?.title || "イベント不明",
+      eventFee: events.get(registration.event_id)?.fee ?? 0,
+      eventStartAt: events.get(registration.event_id)?.start_at ?? null,
+      payment: null,
+    }))]);
     setLoading(false);
   }, [router]);
 
@@ -86,11 +101,11 @@ export default function AdminParticipantsPage() {
 
   const incompleteEvents = useMemo(() => {
     const eventMap = new Map<string, { id: string; title: string; startAt: string | null }>();
-    participants.filter(isOutstandingPayment).forEach((row) => {
+    participants.filter((row) => paymentFilter === "all" || isOutstandingPayment(row)).forEach((row) => {
       eventMap.set(row.event_id, { id: row.event_id, title: row.eventTitle, startAt: row.eventStartAt });
     });
     return [...eventMap.values()].sort((a, b) => dateValue(a.startAt) - dateValue(b.startAt));
-  }, [participants]);
+  }, [participants, paymentFilter]);
 
   const visibleParticipants = useMemo(() => {
     const keyword = search.trim().toLowerCase();
@@ -141,13 +156,13 @@ export default function AdminParticipantsPage() {
           <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <label className="text-xs font-bold text-neutral-600">支払いフィルター
               <select value={paymentFilter} onChange={(event) => setPaymentFilter(event.target.value as "unpaid" | "all")} className="mt-2 w-full rounded-xl border border-neutral-300 bg-white px-4 py-3 text-sm font-normal text-neutral-900">
-                <option value="unpaid">未払いユーザー</option>
-                <option value="all">すべてのユーザー</option>
+                <option value="unpaid">未払いの会員</option>
+                <option value="all">すべての参加者</option>
               </select>
             </label>
-            <label className="text-xs font-bold text-neutral-600">未払いがあるイベント
+            <label className="text-xs font-bold text-neutral-600">イベント
               <select value={eventFilter} onChange={(event) => setEventFilter(event.target.value)} className="mt-2 w-full rounded-xl border border-neutral-300 bg-white px-4 py-3 text-sm font-normal text-neutral-900">
-                <option value="">すべての未完了イベント</option>
+                <option value="">すべてのイベント</option>
                 {incompleteEvents.map((event) => <option key={event.id} value={event.id}>{event.title}</option>)}
               </select>
             </label>
@@ -172,11 +187,11 @@ export default function AdminParticipantsPage() {
               <span>参加者名</span><span>イベント名</span><span>支払い状況</span>
             </div>
             {visibleParticipants.map((row) => (
-              <div key={row.id} className={`grid gap-3 border-b border-neutral-100 px-5 py-5 last:border-0 md:grid-cols-[1fr_1.5fr_240px] md:items-center md:gap-4 md:px-6 ${row.payment?.status === "confirmation_requested" ? "bg-blue-50" : ""}`}>
-                <p className="font-bold text-neutral-900">{row.userName}</p>
+              <div key={`${row.kind}:${row.id}`} className={`grid gap-3 border-b border-neutral-100 px-5 py-5 last:border-0 md:grid-cols-[1fr_1.5fr_240px] md:items-center md:gap-4 md:px-6 ${row.payment?.status === "confirmation_requested" ? "bg-blue-50" : ""}`}>
+                <p className="font-bold text-neutral-900">{row.userName}{row.kind === "guest" && <span className="ml-2 rounded-full bg-neutral-100 px-2 py-1 text-xs font-medium text-neutral-600">ゲスト</span>}</p>
                 <p className="text-sm text-neutral-700">{row.eventTitle}</p>
                 <div className="flex flex-wrap items-center gap-2">
-                  <PaymentBadge fee={row.eventFee} payment={row.payment} />
+                  {row.kind === "guest" && row.eventFee > 0 ? <span className="rounded-full bg-neutral-100 px-3 py-1 text-xs font-bold text-neutral-600">支払い情報なし</span> : <PaymentBadge fee={row.eventFee} payment={row.payment} />}
                   {row.payment?.status === "confirmation_requested" && (
                     <button
                       type="button"
@@ -199,6 +214,7 @@ export default function AdminParticipantsPage() {
 }
 
 function isOutstandingPayment(row: ParticipantRow) {
+  if (row.kind === "guest") return false;
   const activeRegistration = row.status === "reserved" || row.status === "joined";
   return activeRegistration && row.eventFee > 0 && row.payment?.status !== "paid";
 }

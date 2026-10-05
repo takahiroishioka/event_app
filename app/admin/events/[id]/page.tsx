@@ -53,7 +53,7 @@ type UserEventDatabaseRow = {
   status: string;
   created_at: string | null;
   plan_id: string | null;
-  event_plans: { name: string }[] | null;
+  event_plans: { name: string } | { name: string }[] | null;
 };
 
 type UserRow = {
@@ -62,6 +62,7 @@ type UserRow = {
 };
 
 type UserEventRow = UserEventDatabaseRow & {
+  is_guest?: boolean;
   user_name: string | null;
   plan_name: string | null;
 };
@@ -263,6 +264,7 @@ export default function AdminEventDetailPage() {
     const [
       questionResult,
       registrationResult,
+      guestResult,
     ] = await Promise.all([
       supabase
         .from("event_questions")
@@ -292,6 +294,9 @@ export default function AdminEventDetailPage() {
         .order("created_at", {
           ascending: true,
         }),
+      supabase.from("guest_event_registrations")
+        .select("id, guest_name, status, created_at, plan_id, event_plans(name)")
+        .eq("event_id", eventId).order("created_at"),
     ]);
 
     if (questionResult.error) {
@@ -308,7 +313,7 @@ export default function AdminEventDetailPage() {
       return;
     }
 
-    if (registrationResult.error) {
+    if (registrationResult.error || guestResult.error) {
       console.error(
         "参加者取得エラー:",
         registrationResult.error
@@ -316,7 +321,7 @@ export default function AdminEventDetailPage() {
 
       setIsError(true);
       setMessage(
-        `参加情報を取得できませんでした：${registrationResult.error.message}`
+        `参加情報を取得できませんでした：${(registrationResult.error || guestResult.error)!.message}`
       );
       setLoading(false);
       return;
@@ -329,6 +334,8 @@ export default function AdminEventDetailPage() {
     const registrationData =
       (registrationResult.data ??
         []) as UserEventDatabaseRow[];
+
+    const guestData = (guestResult.data ?? []) as Array<Omit<UserEventDatabaseRow, "user_id"> & { guest_name: string }>;
 
     setQuestions(questionData);
 
@@ -394,7 +401,7 @@ export default function AdminEventDetailPage() {
       registrationData.map(
         (registration) => ({
           ...registration,
-          plan_name: registration.event_plans?.[0]?.name ?? null,
+          plan_name: (Array.isArray(registration.event_plans) ? registration.event_plans[0]?.name : registration.event_plans?.name) ?? null,
           user_name:
             userNameMap.get(
               registration.user_id
@@ -403,7 +410,10 @@ export default function AdminEventDetailPage() {
       );
 
     setRegistrations(
-      registrationsWithName
+      [...registrationsWithName, ...guestData.map((guest): UserEventRow => ({
+        ...guest, id: `guest:${guest.id}`, user_id: "", is_guest: true,
+        user_name: guest.guest_name, plan_name: (Array.isArray(guest.event_plans) ? guest.event_plans[0]?.name : guest.event_plans?.name) ?? null,
+      }))].sort((a, b) => (a.created_at ?? "").localeCompare(b.created_at ?? ""))
     );
 
     /*
@@ -416,7 +426,7 @@ export default function AdminEventDetailPage() {
       );
 
     if (
-      userEventIds.length === 0
+      userEventIds.length === 0 && guestData.length === 0
     ) {
       setAnswers([]);
       setLoading(false);
@@ -426,10 +436,8 @@ export default function AdminEventDetailPage() {
     /*
      * アンケート回答を取得
      */
-    const {
-      data: answerData,
-      error: answerError,
-    } = await supabase
+    const [memberAnswers, guestAnswers] = await Promise.all([
+      userEventIds.length ? supabase
       .from("user_event_answers")
       .select(`
         id,
@@ -440,7 +448,13 @@ export default function AdminEventDetailPage() {
       .in(
         "user_event_id",
         userEventIds
-      );
+      ) : Promise.resolve({ data: [], error: null }),
+      guestData.length ? supabase.from("guest_event_answers")
+        .select("id, guest_registration_id, question_id, answer_text")
+        .in("guest_registration_id", guestData.map((guest) => guest.id))
+        : Promise.resolve({ data: [], error: null }),
+    ]);
+    const answerError = memberAnswers.error || guestAnswers.error;
 
     if (answerError) {
       console.error(
@@ -457,8 +471,11 @@ export default function AdminEventDetailPage() {
     }
 
     setAnswers(
-      (answerData ??
-        []) as AnswerRow[]
+      [...((memberAnswers.data ?? []) as AnswerRow[]),
+        ...(guestAnswers.data ?? []).map((answer) => ({
+          id: `guest:${answer.id}`, user_event_id: `guest:${answer.guest_registration_id}`,
+          question_id: answer.question_id, answer_text: answer.answer_text,
+        }))]
     );
 
     setLoading(false);
@@ -478,6 +495,7 @@ function handleExportCsv() {
 
   const headers = [
     "参加者名",
+    "参加者区分",
     "ユーザーID",
     "参加プラン",
     "参加状態",
@@ -503,7 +521,9 @@ function handleExportCsv() {
 
     return [
       registration.user_name || "名前未登録",
+      registration.is_guest ? "ゲスト" : "会員",
       registration.user_id,
+      registration.plan_name ?? "",
       getRegistrationStatusLabel(
         registration.status
       ),
@@ -1252,18 +1272,18 @@ function sanitizeFileName(
                             </p>
 
                             <h3 className="mt-2 text-xl font-bold text-neutral-900">
-                              {registration.user_name ||
+                              {registration.is_guest && <span className="mr-2 rounded-full bg-neutral-100 px-2 py-1 text-xs font-medium text-neutral-600">ゲスト</span>}{registration.user_name ||
                                 "名前未登録"}
                             </h3>
 
                             {registration.plan_name && <p className="mt-2 text-sm font-bold text-blue-700">参加プラン：{registration.plan_name}</p>}
 
-                            <p className="mt-2 break-all text-xs text-neutral-400">
+                            {!registration.is_guest && <p className="mt-2 break-all text-xs text-neutral-400">
                               ユーザーID：
                               {
                                 registration.user_id
                               }
-                            </p>
+                            </p>}
 
                             {registration.created_at && (
                               <p className="mt-1 text-xs text-neutral-400">

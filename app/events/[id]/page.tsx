@@ -13,6 +13,7 @@ import {
   useRouter,
 } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { setApplicationAnswer } from "@/lib/event-application-identity";
 import EventApplicationQuestions, {
   type EventAnswers,
   type EventQuestion,
@@ -450,7 +451,7 @@ export default function EventDetailPage() {
       if (user && nameQuestion) {
         const { data: profile, error: profileError } = await supabase.from("users").select("name").eq("id", user.id).maybeSingle();
         if (profileError) console.error("プロフィール取得エラー:", profileError);
-        setAnswers((current) => ({ ...current, [nameQuestion.id]: current[nameQuestion.id] ?? profile?.name ?? "" }));
+        setAnswers((current) => setApplicationAnswer(typedQuestions, current, nameQuestion.id, current[nameQuestion.id] ?? profile?.name ?? ""));
       }
       if (!user) setAnswers({});
       setQuestions(formattedQuestions);
@@ -471,10 +472,7 @@ export default function EventDetailPage() {
     questionId: string,
     value: string | string[]
   ) {
-    setAnswers((current) => ({
-      ...current,
-      [questionId]: value,
-    }));
+    setAnswers((current) => setApplicationAnswer(questions, current, questionId, value));
   }
 
   const unansweredRequiredQuestions =

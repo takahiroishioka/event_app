@@ -2,11 +2,15 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
 export default function SiteHeader({ siteName = "TYPESTYLE EVENT" }: { siteName?: string }) {
   const router = useRouter();
+  const pathname = usePathname();
+  const isVoiceSite = pathname.startsWith("/lines") || pathname.startsWith("/users/");
+  const homePath = isVoiceSite ? "/lines" : "/";
+  const mypagePath = isVoiceSite ? "/lines/mypage" : "/mypage";
   const menuRef = useRef<HTMLDivElement>(null);
   const [isLoggedIn, setIsLoggedIn] = useState<boolean | null>(null);
   const [savedSiteName, setSavedSiteName] = useState<string | null>(null);
@@ -82,21 +86,21 @@ export default function SiteHeader({ siteName = "TYPESTYLE EVENT" }: { siteName?
     setLoggingOut(true);
     await createClient().auth.signOut();
     setMenuOpen(false);
-    router.replace("/");
+    router.replace(homePath);
     router.refresh();
   }
 
   return (
     <header className="relative z-50 border-b border-neutral-200 bg-white">
       <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-5 sm:px-6">
-        <Link href="/" className="text-lg font-black tracking-tight text-neutral-900">
+        <Link href={homePath} className="text-lg font-black tracking-tight text-neutral-900">
           <span className={siteNameLoaded ? undefined : "invisible"}>
-            {savedSiteName ?? siteName}
+            {isVoiceSite ? "こえらぼ" : savedSiteName ?? siteName}
           </span>
         </Link>
 
         {isLoggedIn === false && (
-          <div className="flex items-center gap-3"><Link href="/lines" className="text-sm font-bold text-blue-700">こえらぼ</Link><Link href="/login" className="rounded-xl bg-neutral-900 px-5 py-2.5 text-sm font-bold text-white transition hover:bg-neutral-700">ログイン</Link></div>
+          <div className="flex items-center gap-3"><Link href={isVoiceSite ? "/" : "/lines"} className="text-sm font-bold text-blue-700">{isVoiceSite ? "イベント" : "こえらぼ"}</Link><Link href={`/login?redirect=${mypagePath}`} className="rounded-xl bg-neutral-900 px-5 py-2.5 text-sm font-bold text-white transition hover:bg-neutral-700">ログイン</Link></div>
         )}
 
         {isLoggedIn && (
@@ -115,10 +119,10 @@ export default function SiteHeader({ siteName = "TYPESTYLE EVENT" }: { siteName?
 
             {menuOpen && (
               <nav className="absolute right-0 top-14 w-52 overflow-hidden rounded-2xl border border-neutral-200 bg-white p-2 shadow-xl">
-                <Link href="/" onClick={() => setMenuOpen(false)} className="block rounded-xl px-4 py-3 text-sm font-bold text-neutral-800 hover:bg-neutral-100">TOP</Link>
+                <Link href={homePath} onClick={() => setMenuOpen(false)} className="block rounded-xl px-4 py-3 text-sm font-bold text-neutral-800 hover:bg-neutral-100">TOP</Link>
                 <Link href="/lines" onClick={() => setMenuOpen(false)} className="block rounded-xl px-4 py-3 text-sm font-bold text-neutral-800 hover:bg-neutral-100">こえらぼ</Link>
-                {isAdmin && <Link href="/admin/lines" onClick={() => setMenuOpen(false)} className="block rounded-xl bg-blue-50 px-4 py-3 text-sm font-bold text-blue-700 hover:bg-blue-100">セリフを投稿する</Link>}
-                <Link href="/mypage" onClick={() => setMenuOpen(false)} className="block rounded-xl px-4 py-3 text-sm font-bold text-neutral-800 hover:bg-neutral-100">マイページ</Link>
+                {isVoiceSite && isAdmin && <Link href="/admin/lines" onClick={() => setMenuOpen(false)} className="block rounded-xl bg-blue-50 px-4 py-3 text-sm font-bold text-blue-700 hover:bg-blue-100">セリフを投稿する</Link>}
+                <Link href={mypagePath} onClick={() => setMenuOpen(false)} className="block rounded-xl px-4 py-3 text-sm font-bold text-neutral-800 hover:bg-neutral-100">マイページ</Link>
                 <button type="button" onClick={handleLogout} disabled={loggingOut} className="block w-full rounded-xl px-4 py-3 text-left text-sm font-bold text-red-600 hover:bg-red-50 disabled:text-neutral-400">
                   {loggingOut ? "ログアウト中…" : "ログアウト"}
                 </button>

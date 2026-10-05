@@ -1,5 +1,7 @@
 "use client";
 
+import { getVisibleApplicationQuestions } from "@/lib/event-application-identity";
+
 export type QuestionType =
   | "text"
   | "textarea"
@@ -64,7 +66,7 @@ export default function EventApplicationQuestions({
       </div>
 
       <div className="mt-7 space-y-7">
-        {questions.map((question, index) => (
+        {getVisibleApplicationQuestions(questions).map((question, index) => (
           <QuestionField
             key={question.id}
             question={question}
