@@ -12,7 +12,7 @@ type BannerRow = {
   id: string;
   title: string;
   link_url: string;
-  placement: "top" | "mypage";
+  placement: "top" | "mypage" | "koelabo";
   sort_order: number;
   is_active: boolean;
   audience: "all" | "general" | "ubm";
@@ -23,7 +23,7 @@ export default function AdminBannersPage() {
   const [banners, setBanners] = useState<BannerRow[]>([]);
   const [title, setTitle] = useState("");
   const [linkUrl, setLinkUrl] = useState("");
-  const [placement, setPlacement] = useState<"top" | "mypage">("top");
+  const [placement, setPlacement] = useState<BannerRow["placement"]>("top");
   const [audience, setAudience] = useState<"all" | "general" | "ubm">("all");
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
@@ -105,7 +105,7 @@ export default function AdminBannersPage() {
         <header className="mt-6 rounded-3xl bg-white p-6 shadow-sm sm:p-8">
           <p className="text-sm font-bold text-blue-600">BANNERS</p>
           <h1 className="mt-2 text-3xl font-bold">バナー管理</h1>
-          <p className="mt-3 text-sm text-neutral-500">TOP・マイページ下部のリンク付き画像カルーセルを管理します。</p>
+          <p className="mt-3 text-sm text-neutral-500">イベントTOP・マイページ・こえらぼ下部のバナーを管理します。</p>
         </header>
 
         <form onSubmit={createBanner} className="mt-6 rounded-3xl bg-white p-6 shadow-sm sm:p-8">
@@ -113,7 +113,7 @@ export default function AdminBannersPage() {
           <div className="mt-5 grid gap-4 md:grid-cols-4">
             <label className="text-sm font-bold">管理名<input required value={title} onChange={(event) => setTitle(event.target.value)} className={inputClass} /></label>
             <label className="text-sm font-bold">リンク先<input required type="url" value={linkUrl} onChange={(event) => setLinkUrl(event.target.value)} placeholder="https://..." className={inputClass} /></label>
-            <label className="text-sm font-bold">表示場所<select value={placement} onChange={(event) => setPlacement(event.target.value as "top" | "mypage")} className={inputClass}><option value="top">TOPページ下部</option><option value="mypage">マイページ下部</option></select></label>
+            <label className="text-sm font-bold">表示場所<select value={placement} onChange={(event) => setPlacement(event.target.value as BannerRow["placement"])} className={inputClass}><option value="top">イベントTOP下部</option><option value="mypage">イベントマイページ下部</option><option value="koelabo">こえらぼ下部</option></select></label>
             <label className="text-sm font-bold">表示対象<select value={audience} onChange={(event) => setAudience(event.target.value as "all" | "general" | "ubm")} className={inputClass}><option value="all">全員</option><option value="general">一般ユーザー</option><option value="ubm">UBMユーザー</option></select></label>
           </div>
           <button disabled={saving} className="mt-5 rounded-xl bg-blue-600 px-5 py-3 font-bold text-white disabled:bg-neutral-400">バナーを作成</button>
@@ -127,7 +127,7 @@ export default function AdminBannersPage() {
               <div className="grid gap-4 rounded-2xl bg-white p-5 md:grid-cols-4">
                 <label className="text-sm font-bold">管理名<input value={banner.title} onChange={(event) => changeBanner(banner.id, { title: event.target.value })} className={inputClass} /></label>
                 <label className="text-sm font-bold">リンク先<input type="url" value={banner.link_url} onChange={(event) => changeBanner(banner.id, { link_url: event.target.value })} className={inputClass} /></label>
-                <label className="text-sm font-bold">表示場所<select value={banner.placement} onChange={(event) => changeBanner(banner.id, { placement: event.target.value as "top" | "mypage" })} className={inputClass}><option value="top">TOPページ下部</option><option value="mypage">マイページ下部</option></select></label>
+                <label className="text-sm font-bold">表示場所<select value={banner.placement} onChange={(event) => changeBanner(banner.id, { placement: event.target.value as BannerRow["placement"] })} className={inputClass}><option value="top">イベントTOP下部</option><option value="mypage">イベントマイページ下部</option><option value="koelabo">こえらぼ下部</option></select></label>
                 <label className="text-sm font-bold">表示対象<select value={banner.audience ?? "all"} onChange={(event) => changeBanner(banner.id, { audience: event.target.value as "all" | "general" | "ubm" })} className={inputClass}><option value="all">全員</option><option value="general">一般ユーザー</option><option value="ubm">UBMユーザー</option></select></label><label className="text-sm font-bold">表示順<input type="number" value={banner.sort_order} onChange={(event) => changeBanner(banner.id, { sort_order: Number(event.target.value) })} className={inputClass} /></label>
                 <label className="flex items-center gap-2 text-sm font-bold"><input type="checkbox" checked={banner.is_active} onChange={(event) => changeBanner(banner.id, { is_active: event.target.checked })} />公開</label>
                 <div className="flex gap-4 md:col-span-3 md:justify-end">

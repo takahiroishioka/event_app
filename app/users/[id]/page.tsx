@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import SiteHeader from "@/components/SiteHeader";
 import ShareLinkButton from "@/components/ShareLinkButton";
 import { ProfileIcon } from "@/components/ProfileEditor";
@@ -22,16 +22,13 @@ export default function UserProfilePage() {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
   const [message, setMessage] = useState("");
-  const [bio, setBio] = useState("");
-  const [editing, setEditing] = useState(false);
-  const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState<string | null>(null);
   const deletingRef = useRef(false);
   const requestVersion = useRef(0);
 
   const load = useCallback(async () => {
     const version = ++requestVersion.current;
-    setLoading(true); setLoadError(""); setEditing(false);
+    setLoading(true); setLoadError("");
     try {
       const supabase = createClient();
       const [auth, person, posts] = await Promise.all([
@@ -52,7 +49,6 @@ export default function UserProfilePage() {
       if (version !== requestVersion.current) return;
       setUid(auth.data.user?.id ?? null);
       setProfile(person.data as Profile | null);
-      setBio((person.data as Profile | null)?.bio ?? "");
       setVoices(rows);
       setLines(Object.fromEntries((lineResult.data ?? []).map((line) => [line.id, line])));
       setLikes((likeResult.data ?? []).reduce<Record<string, number>>((counts, like) => {
@@ -72,21 +68,6 @@ export default function UserProfilePage() {
     void load();
     return () => { requestVersion.current++; };
   }, [load]);
-
-  async function saveBio(event: FormEvent) {
-    event.preventDefault();
-    if (uid !== id || saving) return;
-    setSaving(true); setMessage("");
-    try {
-      const { data, error } = await createClient().from("users")
-        .update({ bio: bio.trim() || null, updated_at: new Date().toISOString() })
-        .eq("id", uid).select("bio").single();
-      if (error) throw error;
-      setProfile((current) => current ? { ...current, bio: data.bio } : current);
-      setEditing(false); setMessage("自己紹介を保存しました。");
-    } catch (error) { setMessage(`保存できませんでした：${errorText(error)}`); }
-    finally { setSaving(false); }
-  }
 
   async function deleteVoice(voice: Voice) {
     if (!uid || uid !== voice.user_id || deletingRef.current) return;
@@ -130,11 +111,8 @@ export default function UserProfilePage() {
               <div className="-mt-12"><ProfileIcon name={profile.name} path={profile.avatar_path} /></div>
               <p className="mt-4 text-xs font-bold tracking-widest text-blue-600">KOELABO</p>
               <h1 className="mt-2 break-words text-2xl font-bold">{profile.name || "名前未登録"}</h1>
-              {editing ? <form onSubmit={saveBio} className="mt-5">
-                <label className="block text-sm font-bold">自己紹介<textarea value={bio} onChange={(event) => setBio(event.target.value)} disabled={saving} maxLength={500} rows={4} className="mt-2 w-full rounded-xl border p-3 font-normal" /></label>
-                <div className="mt-3 flex gap-3"><button disabled={saving} className="rounded-xl bg-blue-600 px-4 py-2 text-white">{saving ? "保存中…" : "保存"}</button><button type="button" disabled={saving} onClick={() => { setBio(profile.bio ?? ""); setEditing(false); }} className="rounded-xl border px-4 py-2">キャンセル</button></div>
-              </form> : <p className="mt-4 whitespace-pre-wrap break-words text-sm leading-7 text-neutral-600">{profile.bio || "自己紹介はまだありません。"}</p>}
-              {ownPage && !editing && <div className="mt-4 flex flex-wrap gap-4 text-sm font-bold text-blue-700"><button onClick={() => setEditing(true)}>自己紹介を編集</button><Link href="/lines/mypage">名前・アイコンを設定</Link></div>}
+              {ownPage && <Link href="/lines/mypage/profile" className="mt-2 inline-block text-xs font-bold text-blue-700 underline">編集する</Link>}
+              <p className="mt-4 whitespace-pre-wrap break-words text-sm leading-7 text-neutral-600">{profile.bio || "自己紹介はまだありません。"}</p>
               <div className="mt-6 flex gap-8 border-t pt-5 text-sm"><b>{voices.length} 投稿</b><b>{totalLikes} いいね</b></div>
             </div>
           </section>

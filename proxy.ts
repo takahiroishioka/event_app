@@ -48,7 +48,7 @@ export async function proxy(request: NextRequest) {
     pathname === "/" ||
     isPublicEventDetail ||
     pathname === "/lines" ||
-    (pathname.startsWith("/lines/") && pathname !== "/lines/mypage" && pathname !== "/lines/mypage/") ||
+    (pathname.startsWith("/lines/") && !pathname.startsWith("/lines/mypage")) ||
     pathname.startsWith("/users/") ||
     pathname.startsWith("/login") ||
     pathname.startsWith("/signup") ||

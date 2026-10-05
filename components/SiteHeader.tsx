@@ -121,6 +121,7 @@ export default function SiteHeader({ siteName = "TYPESTYLE EVENT" }: { siteName?
             {menuOpen && (
               <nav className="absolute right-0 top-14 w-52 overflow-hidden rounded-2xl border border-neutral-200 bg-white p-2 shadow-xl">
                 <Link href={homePath} onClick={() => setMenuOpen(false)} className="block rounded-xl px-4 py-3 text-sm font-bold text-neutral-800 hover:bg-neutral-100">TOP</Link>
+                {isVoiceSite && <Link href="/" onClick={() => setMenuOpen(false)} className="block rounded-xl px-4 py-3 text-sm font-bold text-neutral-800 hover:bg-neutral-100">イベントアプリ</Link>}
                 <Link href="/lines" onClick={() => setMenuOpen(false)} className="block rounded-xl px-4 py-3 text-sm font-bold text-neutral-800 hover:bg-neutral-100">こえらぼ</Link>
                 {isVoiceSite && isAdmin && <Link href="/admin/lines" onClick={() => setMenuOpen(false)} className="block rounded-xl bg-blue-50 px-4 py-3 text-sm font-bold text-blue-700 hover:bg-blue-100">セリフを投稿する</Link>}
                 <Link href={mypagePath} onClick={() => setMenuOpen(false)} className="block rounded-xl px-4 py-3 text-sm font-bold text-neutral-800 hover:bg-neutral-100">マイページ</Link>

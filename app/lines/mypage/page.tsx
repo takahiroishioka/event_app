@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import SiteHeader from "@/components/SiteHeader";
 import ShareLinkButton from "@/components/ShareLinkButton";
-import ProfileEditor, { ProfileIcon } from "@/components/ProfileEditor";
+import { ProfileIcon } from "@/components/ProfileEditor";
 
 type Profile = { id: string; name: string; avatar_path: string | null };
 type VoicePost = {
@@ -47,12 +47,11 @@ export default function VoiceMyPage() {
     <header className="mb-6 rounded-3xl bg-white p-6 shadow-sm sm:p-8">
       <p className="text-sm font-bold text-blue-600">KOELABO</p>
       <h1 className="mt-2 text-3xl font-bold text-neutral-900">こえらぼのマイページ</h1>
-      {profile && <div className="mt-5 flex items-center gap-4"><ProfileIcon name={profile.name} path={profile.avatar_path} /><p className="text-xl font-bold">{profile.name || "名前未登録"}</p></div>}
+      {profile && <div className="mt-5 flex flex-wrap items-center gap-4"><ProfileIcon name={profile.name} path={profile.avatar_path} /><div><p className="text-xl font-bold">{profile.name || "名前未登録"}</p><Link href="/lines/mypage/profile" className="mt-2 inline-block text-xs font-bold text-blue-700 underline">編集する</Link></div></div>}
       <Link href="/lines" className="mt-5 inline-block text-sm font-bold text-blue-700 underline">セリフを探す</Link>
     </header>
     {message && <p role="alert" className="mb-6 rounded-xl bg-red-50 p-4 text-sm text-red-700">{message}</p>}
     {loading ? <p className="py-10 text-center text-neutral-500">読み込み中…</p> : <>
-      {profile && <ProfileEditor key={profile.id} userId={profile.id} name={profile.name} avatarPath={profile.avatar_path} onSaved={(name, path) => setProfile({ ...profile, name, avatar_path: path })} />}
       <section className="mt-8"><h2 className="mb-5 text-2xl font-bold text-neutral-900">自分の投稿</h2>
         {!message && posts.length === 0 && <p className="rounded-2xl bg-white p-8 text-center text-neutral-500">まだ声を投稿していません。</p>}
         <div className="space-y-4">{posts.map((post) => {
