@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import VoiceTimelineTabs from "@/components/VoiceTimelineTabs";
 
 export default function SiteHeader({ siteName = "TYPESTYLE EVENT" }: { siteName?: string }) {
   const router = useRouter();
@@ -131,6 +132,7 @@ export default function SiteHeader({ siteName = "TYPESTYLE EVENT" }: { siteName?
           </div>
         )}
       </div>
+      {isVoiceSite && <VoiceTimelineTabs />}
     </header>
   );
 }
