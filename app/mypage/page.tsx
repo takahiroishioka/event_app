@@ -9,6 +9,8 @@ import SiteHeader from "@/components/SiteHeader";
 import BannerSection, { type Banner } from "@/components/BannerSection";
 import SocialFooter from "@/components/SocialFooter";
 import { attachEventPreviewImages } from "@/lib/event-images";
+import EventMonthCalendar from "@/components/EventMonthCalendar";
+import { eventMonth, isPastEvent } from "@/lib/event-calendar";
 
 const supabase = createClient();
 
@@ -61,6 +63,7 @@ export default function MyPage() {
   const [pastEvents, setPastEvents] = useState<EventData[]>([]);
   const [assignedTasks, setAssignedTasks] = useState<AssignedTask[]>([]);
   const [showPastEvents, setShowPastEvents] = useState(false);
+  const [pastMonth, setPastMonth] = useState("");
   const [banners, setBanners] = useState<Banner[]>([]);
   const [footerSettings, setFooterSettings] = useState(defaultFooterSettings);
 
@@ -287,7 +290,7 @@ export default function MyPage() {
 
       const pastEventMap = new Map<string, EventData>();
       [...joinedEventsWithImages, ...publishedEventsWithImages]
-        .filter(isPastEvent)
+        .filter((event) => isPastEvent(event))
         .forEach((event) => pastEventMap.set(event.id, event));
       setPastEvents([...pastEventMap.values()].sort(compareEventDates));
 
@@ -332,6 +335,8 @@ export default function MyPage() {
   }, [router]);
 
   const nearestTask = assignedTasks.find((task) => !task.completed_at) ?? null;
+  const selectedPastMonth = pastMonth || pastEvents.map((event) => eventMonth(event.start_at)).sort().at(-1) || eventMonth(new Date().toISOString());
+  const monthlyPastEvents = pastEvents.filter((event) => eventMonth(event.start_at) === selectedPastMonth);
 
   if (loading) {
     return (
@@ -502,9 +507,10 @@ export default function MyPage() {
             </button>
             {showPastEvents && (
               <div className="mt-6">
-                <h2 className="mb-5 text-2xl font-bold text-neutral-900">開催日の過ぎたイベント</h2>
+                <EventMonthCalendar month={selectedPastMonth} events={pastEvents} onChange={setPastMonth} />
                 <div className="space-y-5">
-                  {pastEvents.map((event) => <EventCard key={event.id} event={event} past />)}
+                  {monthlyPastEvents.map((event) => <EventCard key={event.id} event={event} past />)}
+                  {monthlyPastEvents.length === 0 && <p className="rounded-2xl bg-white p-8 text-center text-neutral-500">この月の過去のイベントはありません。</p>}
                 </div>
               </div>
             )}
@@ -601,13 +607,8 @@ function formatFee(fee: number) {
   return `${fee.toLocaleString("ja-JP")}円`;
 }
 
-function isPastEvent(event: EventData) {
-  return event.start_at ? new Date(event.start_at).getTime() < Date.now() : false;
-}
-
 function compareEventDates(a: EventData, b: EventData) {
   const aTime = a.start_at ? new Date(a.start_at).getTime() : Number.MAX_SAFE_INTEGER;
   const bTime = b.start_at ? new Date(b.start_at).getTime() : Number.MAX_SAFE_INTEGER;
   return aTime - bTime;
 }
-

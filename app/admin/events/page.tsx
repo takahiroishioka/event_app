@@ -9,6 +9,8 @@ import {
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { attachEventPreviewImages } from "@/lib/event-images";
+import EventMonthCalendar from "@/components/EventMonthCalendar";
+import { eventMonth, isPastEvent } from "@/lib/event-calendar";
 
 const supabase = createClient();
 
@@ -16,6 +18,7 @@ type EventRow = {
   id: string;
   title: string;
   start_at: string | null;
+  end_at: string | null;
   location: string | null;
   status: string;
   capacity: number | null;
@@ -31,6 +34,8 @@ export default function AdminEventsPage() {
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
   const [isGlobalAdmin, setIsGlobalAdmin] = useState(false);
+  const [showPastEvents, setShowPastEvents] = useState(false);
+  const [pastMonth, setPastMonth] = useState("");
 
   const loadEvents = useCallback(async () => {
     setLoading(true);
@@ -95,6 +100,7 @@ export default function AdminEventsPage() {
         id,
         title,
         start_at,
+        end_at,
         location,
         status,
         capacity,
@@ -156,6 +162,12 @@ export default function AdminEventsPage() {
     );
   }
 
+  const pastEvents = events.filter((event) => isPastEvent(event));
+  const selectedPastMonth = pastMonth || pastEvents.map((event) => eventMonth(event.start_at)).sort().at(-1) || eventMonth(new Date().toISOString());
+  const visibleEvents = events.filter((event) => showPastEvents
+    ? isPastEvent(event) && eventMonth(event.start_at) === selectedPastMonth
+    : !isPastEvent(event)).sort((a, b) => (a.start_at ?? "9999").localeCompare(b.start_at ?? "9999"));
+
   return (
     <main className="min-h-screen bg-neutral-100 px-4 py-8 sm:px-6">
       <div className="mx-auto max-w-5xl">
@@ -199,19 +211,24 @@ export default function AdminEventsPage() {
           </p>
         )}
 
-        {events.length === 0 ? (
+        <div className="my-6 flex gap-3">
+          <button type="button" aria-pressed={!showPastEvents} onClick={() => setShowPastEvents(false)} className={`rounded-xl px-5 py-3 text-sm font-bold ${!showPastEvents ? "bg-blue-600 text-white" : "bg-white text-neutral-700"}`}>今後の予定</button>
+          <button type="button" aria-pressed={showPastEvents} onClick={() => setShowPastEvents(true)} className={`rounded-xl px-5 py-3 text-sm font-bold ${showPastEvents ? "bg-blue-600 text-white" : "bg-white text-neutral-700"}`}>過去のイベント</button>
+        </div>
+        {showPastEvents && <EventMonthCalendar month={selectedPastMonth} events={pastEvents} onChange={setPastMonth} />}
+        {visibleEvents.length === 0 ? (
           <div className="mt-6 rounded-3xl bg-white p-10 text-center shadow-sm">
             <p className="font-bold text-neutral-800">
-              イベントはまだありません
+              {showPastEvents ? "この月の過去のイベントはありません" : "今後のイベントはありません"}
             </p>
 
             <p className="mt-2 text-sm text-neutral-500">
-              イベントを作成すると、ここに表示されます。
+              {showPastEvents ? "カレンダーで別の月を選んでください。" : "過去のイベントはカレンダーから確認できます。"}
             </p>
           </div>
         ) : (
           <div className="mt-6 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {events.map((event) => (
+            {visibleEvents.map((event) => (
               <Link
                 key={event.id}
                 href={`/admin/events/${event.id}`}
