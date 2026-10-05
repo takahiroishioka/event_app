@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import SiteHeader from "@/components/SiteHeader";
+import ShareLinkButton from "@/components/ShareLinkButton";
 import { ProfileIcon } from "@/components/ProfileEditor";
 import { createClient } from "@/lib/supabase/client";
 
@@ -133,7 +134,7 @@ export default function UserProfilePage() {
                 <label className="block text-sm font-bold">自己紹介<textarea value={bio} onChange={(event) => setBio(event.target.value)} disabled={saving} maxLength={500} rows={4} className="mt-2 w-full rounded-xl border p-3 font-normal" /></label>
                 <div className="mt-3 flex gap-3"><button disabled={saving} className="rounded-xl bg-blue-600 px-4 py-2 text-white">{saving ? "保存中…" : "保存"}</button><button type="button" disabled={saving} onClick={() => { setBio(profile.bio ?? ""); setEditing(false); }} className="rounded-xl border px-4 py-2">キャンセル</button></div>
               </form> : <p className="mt-4 whitespace-pre-wrap break-words text-sm leading-7 text-neutral-600">{profile.bio || "自己紹介はまだありません。"}</p>}
-              {ownPage && !editing && <div className="mt-4 flex flex-wrap gap-4 text-sm font-bold text-blue-700"><button onClick={() => setEditing(true)}>自己紹介を編集</button><Link href="/mypage">名前・アイコンを設定</Link></div>}
+              {ownPage && !editing && <div className="mt-4 flex flex-wrap gap-4 text-sm font-bold text-blue-700"><button onClick={() => setEditing(true)}>自己紹介を編集</button><Link href="/lines/mypage">名前・アイコンを設定</Link></div>}
               <div className="mt-6 flex gap-8 border-t pt-5 text-sm"><b>{voices.length} 投稿</b><b>{totalLikes} いいね</b></div>
             </div>
           </section>
@@ -148,7 +149,7 @@ export default function UserProfilePage() {
                     {line.category && <p className="mt-1 text-xs text-neutral-500">{line.category}</p>}
                     <p className="mt-3 line-clamp-3 whitespace-pre-wrap break-words text-sm leading-6 text-neutral-600">「{line.body}」</p></>
                     : <p className="font-bold text-neutral-500">非公開のセリフ</p>}
-                  <audio controls preload="none" src={voice.audio_url} aria-label={`${line?.title ?? "セリフ"}への投稿音声`} className="mt-4 w-full" />
+                  <div className="mt-3 flex items-center justify-between gap-3"><Link href={`/lines/voices/${voice.id}`} className="text-sm font-bold text-blue-700 underline">この声のページへ</Link><ShareLinkButton path={`/lines/voices/${voice.id}`} /></div><audio controls preload="none" src={voice.audio_url} aria-label={`${line?.title ?? "セリフ"}への投稿音声`} className="mt-4 w-full" />
                   {voice.note && <p className="mt-3 whitespace-pre-wrap break-words rounded-xl bg-neutral-50 p-3 text-sm">{voice.note}</p>}
                   <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
                     <p className="text-xs text-neutral-500"><time dateTime={voice.created_at}>{new Date(voice.created_at).toLocaleDateString("ja-JP", { timeZone: "Asia/Tokyo" })}</time><span className="ml-4">♥ {likes[voice.id] ?? 0}</span></p>

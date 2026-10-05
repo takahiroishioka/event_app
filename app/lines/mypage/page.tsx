@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import SiteHeader from "@/components/SiteHeader";
+import ShareLinkButton from "@/components/ShareLinkButton";
 import ProfileEditor, { ProfileIcon } from "@/components/ProfileEditor";
 
 type Profile = { id: string; name: string; avatar_path: string | null };
@@ -59,7 +60,7 @@ export default function VoiceMyPage() {
           return <article key={post.id} className="rounded-2xl bg-white p-5 shadow-sm">
             <Link href={`/lines/${post.line_id}`} className="font-bold text-blue-700 underline">{line?.title ?? "セリフを見る"}</Link>
             <p className="mt-2 text-xs text-neutral-500">{new Date(post.created_at).toLocaleDateString("ja-JP", { timeZone: "Asia/Tokyo" })}</p>
-            <audio controls preload="none" src={post.audio_url} className="mt-4 w-full" />
+            <div className="mt-3 flex items-center justify-between gap-3"><Link href={`/lines/voices/${post.id}`} className="text-sm font-bold text-blue-700 underline">この声のページへ</Link><ShareLinkButton path={`/lines/voices/${post.id}`} /></div><audio controls preload="none" src={post.audio_url} className="mt-4 w-full" />
             {post.note && <p className="mt-3 whitespace-pre-wrap text-sm text-neutral-600">{post.note}</p>}
           </article>;
         })}</div>
