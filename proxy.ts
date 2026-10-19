@@ -88,6 +88,7 @@ export async function proxy(request: NextRequest) {
 
 export const config = {
   matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    // Social preview crawlers must fetch generated images without authentication.
+    "/((?!_next/static|_next/image|favicon.ico|opengraph-image/?$|lines/opengraph-image/?$|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
 };

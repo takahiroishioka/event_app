@@ -13,6 +13,7 @@ export default function AdminFooterPage() {
   const [instagramUrl, setInstagramUrl] = useState("");
   const [xUrl, setXUrl] = useState("");
   const [youtubeUrl, setYoutubeUrl] = useState("");
+  const [lineUrl, setLineUrl] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
@@ -22,7 +23,7 @@ export default function AdminFooterPage() {
     async function loadSettings() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { router.replace("/login?redirect=/admin/footer"); return; }
-      const { data, error } = await supabase.from("footer_settings").select("brand_name, instagram_url, x_url, youtube_url").eq("id", true).maybeSingle();
+      const { data, error } = await supabase.from("footer_settings").select("brand_name, instagram_url, x_url, youtube_url, line_url").eq("id", true).maybeSingle();
       if (!active) return;
       if (error) setMessage(`設定を取得できませんでした：${error.message}`);
       if (data) {
@@ -30,6 +31,7 @@ export default function AdminFooterPage() {
         setInstagramUrl(data.instagram_url ?? "");
         setXUrl(data.x_url ?? "");
         setYoutubeUrl(data.youtube_url ?? "");
+        setLineUrl(data.line_url ?? "");
       }
       setLoading(false);
     }
@@ -39,11 +41,16 @@ export default function AdminFooterPage() {
 
   async function saveSettings(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (lineUrl.trim() && !/^https?:\/\//i.test(lineUrl.trim())) {
+      setMessage("公式LINE URLは https:// または http:// で始まるURLを入力してください。");
+      return;
+    }
     setSaving(true);
     setMessage("");
     const { error } = await supabase.from("footer_settings").update({
       brand_name: brandName.trim(), instagram_url: instagramUrl.trim() || null,
       x_url: xUrl.trim() || null, youtube_url: youtubeUrl.trim() || null,
+      line_url: lineUrl.trim() || null,
       updated_at: new Date().toISOString(),
     }).eq("id", true);
     setMessage(error ? `保存できませんでした：${error.message}` : "フッター設定を保存しました。");
@@ -65,6 +72,8 @@ export default function AdminFooterPage() {
           <label className="block text-sm font-bold">Instagram URL<input type="url" value={instagramUrl} onChange={(event) => setInstagramUrl(event.target.value)} placeholder="https://www.instagram.com/..." className={inputClass} /></label>
           <label className="block text-sm font-bold">X URL<input type="url" value={xUrl} onChange={(event) => setXUrl(event.target.value)} placeholder="https://x.com/..." className={inputClass} /></label>
           <label className="block text-sm font-bold">YouTube URL<input type="url" value={youtubeUrl} onChange={(event) => setYoutubeUrl(event.target.value)} placeholder="https://www.youtube.com/..." className={inputClass} /></label>
+          <label className="block text-sm font-bold">公式LINE URL<input type="url" value={lineUrl} onChange={(event) => setLineUrl(event.target.value)} placeholder="https://lin.ee/..." aria-describedby="line-url-help" className={inputClass} /></label>
+          <p id="line-url-help" className="text-sm text-neutral-500">参加申し込みの下に表示する「日程調整希望」のリンク先です。空欄で保存するとリンクを非表示にします。</p>
           <button disabled={saving} className="rounded-xl bg-blue-600 px-5 py-3 font-bold text-white disabled:bg-neutral-400">{saving ? "保存中…" : "設定を保存"}</button>
           {message && <p className="rounded-xl bg-neutral-100 p-4 text-sm">{message}</p>}
         </form>

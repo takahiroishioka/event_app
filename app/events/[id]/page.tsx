@@ -102,6 +102,20 @@ export default function EventDetailPage() {
 
   const [plans, setPlans] = useState<EventPlan[]>([]);
   const [selectedPlanId, setSelectedPlanId] = useState("");
+  const [lineUrl, setLineUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    async function loadLineUrl() {
+      const { data, error } = await supabase.from("footer_settings").select("line_url").eq("id", true).maybeSingle();
+      if (!active) return;
+      if (error) console.error("公式LINE URL取得エラー:", error);
+      const url = data?.line_url?.trim();
+      setLineUrl(url && /^https?:\/\//i.test(url) ? url : null);
+    }
+    void loadLineUrl();
+    return () => { active = false; };
+  }, []);
 
   const [isLoggedIn, setIsLoggedIn] =
     useState(false);
@@ -1273,6 +1287,14 @@ export default function EventDetailPage() {
                 {guestApplicationOpen && !isLoggedIn && <button type="button" onClick={() => setGuestApplicationOpen(false)} disabled={processing} className="mt-3 w-full px-5 py-3 text-sm font-bold text-neutral-500">閉じる</button>}
               </>
             )}
+          </div>
+        )}
+        {canJoin && lineUrl && (
+          <div className="mt-3">
+            <a href={lineUrl} target="_blank" rel="noopener noreferrer" className="block w-full rounded-xl border border-green-600 bg-white px-5 py-4 text-center font-bold text-green-700 transition hover:bg-green-50">
+              日程調整希望
+            </a>
+            <p className="mt-2 text-center text-xs text-neutral-500">公式LINEが別タブで開きます。</p>
           </div>
         )}
         {isJoined &&
