@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-export const maxVoiceFileSize = 20 * 1024 * 1024;
+export const maxVoiceFileSize = 50 * 1024 * 1024;
 const formats: Record<string, string> = {
   mp3: "audio/mpeg", m4a: "audio/mp4", mp4: "audio/mp4",
   wav: "audio/wav", webm: "audio/webm", ogg: "audio/ogg", oga: "audio/ogg",
@@ -13,7 +13,7 @@ const mimeExtensions: Record<string, string> = {
 
 export function voiceFileFormat(file: { name: string; type: string; size: number }) {
   if (!file.size) throw new Error("音声ファイルが空です。別のファイルを選んでください。");
-  if (file.size > maxVoiceFileSize) throw new Error("音声ファイルは20MB以下にしてください。");
+  if (file.size > maxVoiceFileSize) throw new Error("音声ファイルは50MB以下にしてください。");
   const extension = file.name.split(".").pop()?.toLowerCase() ?? "";
   const mime = file.type.toLowerCase().split(";")[0].trim();
   const resolved = formats[extension] ? extension : mimeExtensions[mime];
