@@ -22,6 +22,7 @@ import EventApplicationQuestions, {
 } from "@/components/EventApplicationQuestions";
 import ImageCarousel, { type CarouselImage } from "@/components/ImageCarousel";
 import SiteHeader from "@/components/SiteHeader";
+import EventInterestCallout from "@/components/EventInterestCallout";
 
 const supabase = createClient();
 
@@ -352,6 +353,13 @@ export default function EventDetailPage() {
 
       setParticipantCount(count ?? 0);
 
+      if (!eventData.start_at) {
+        setQuestions([]);
+        setQuestionsReady(false);
+        setLoading(false);
+        return;
+      }
+
 
       const {
         data: questionRows,
@@ -479,11 +487,12 @@ export default function EventDetailPage() {
       );
       setLoading(false);
     },
-    [eventId, router]
+    [eventId]
   );
 
   useEffect(() => {
-    loadEvent();
+    const timer = window.setTimeout(() => void loadEvent(), 0);
+    return () => window.clearTimeout(timer);
   }, [loadEvent]);
 
   function handleAnswerChange(
@@ -525,6 +534,7 @@ export default function EventDetailPage() {
 
   const hasCompletedRequiredQuestions =
     questionsReady && unansweredRequiredQuestions.length === 0;
+  const isDateUndecided = event?.start_at === null;
 
   const isFull =
     event?.capacity !== null &&
@@ -554,6 +564,7 @@ export default function EventDetailPage() {
 
   const canManagePayment =
     event !== null &&
+    !isDateUndecided &&
     applicationFee > 0 &&
     event.payment_management_required &&
     (userEvent?.status === "reserved" ||
@@ -675,7 +686,7 @@ export default function EventDetailPage() {
   }
 
   async function handleGuestJoin() {
-    if (!event) return;
+    if (!event || !event.start_at) return;
     const nameQuestion = questions.find((question) => question.application_field === "name");
     const nameAnswer = nameQuestion ? answers[nameQuestion.id] : "";
     const normalizedName = typeof nameAnswer === "string" ? nameAnswer.trim() : "";
@@ -697,7 +708,7 @@ export default function EventDetailPage() {
     setProcessing(false);
   }
   async function handleJoin() {
-    if (!event) {
+    if (!event || !event.start_at) {
       return;
     }
 
@@ -1113,6 +1124,7 @@ export default function EventDetailPage() {
               <StatusBadge
                 status={event.status}
               />
+              {isDateUndecided && event.status === "published" && <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-bold text-blue-700">参加希望募集中・開催日未定</span>}
 
               <span className="rounded-full bg-neutral-100 px-3 py-1 text-xs font-bold text-neutral-600">
                 {formatFee(event.fee)}
@@ -1238,7 +1250,8 @@ export default function EventDetailPage() {
           </section>
         )}
 
-        {canJoin && (
+        {event.status === "published" && isDateUndecided && <EventInterestCallout lineUrl={lineUrl} title={event.title} />}
+        {canJoin && !isDateUndecided && (
           <div id="application" className="mt-6 scroll-mt-24">
             {!isLoggedIn && !guestApplicationOpen && !applicationChoiceOpen && (
               <button type="button" onClick={() => setApplicationChoiceOpen(true)} className="w-full rounded-xl bg-blue-600 px-5 py-4 font-bold text-white hover:bg-blue-700">参加方法を選択</button>
@@ -1289,7 +1302,7 @@ export default function EventDetailPage() {
             )}
           </div>
         )}
-        {canJoin && lineUrl && (
+        {canJoin && !isDateUndecided && lineUrl && (
           <div className="mt-3">
             <a href={lineUrl} target="_blank" rel="noopener noreferrer" className="block w-full rounded-xl border border-green-600 bg-white px-5 py-4 text-center font-bold text-green-700 transition hover:bg-green-50">
               日程調整希望

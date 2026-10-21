@@ -561,7 +561,7 @@ function EventCard({
         <div className="min-w-0 p-3 sm:p-5">
           <div className="flex flex-wrap items-center gap-2">
             <span className={`rounded-full px-2.5 py-1 text-[11px] font-bold ${past ? "bg-neutral-200 text-neutral-700" : joined ? "bg-green-100 text-green-700" : "bg-neutral-100 text-neutral-600"}`}>
-              {past ? "開催終了" : joined ? "参加予定" : "受付中"}
+              {past ? "開催終了" : joined ? "参加予定" : event.start_at ? "受付中" : "参加希望募集中"}
             </span>
             <span className="text-xs font-bold text-neutral-600">{formatFee(event.fee)}</span>
           </div>

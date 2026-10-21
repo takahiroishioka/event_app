@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import EventScheduleFields from "@/components/EventScheduleFields";
 import {
   FormEvent,
   ReactNode,
@@ -52,6 +53,7 @@ export default function NewEventPage() {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
 
+  const [dateUndecided, setDateUndecided] = useState(false);
   const [startAt, setStartAt] = useState("");
   const [endAt, setEndAt] = useState("");
 
@@ -340,7 +342,9 @@ export default function NewEventPage() {
       return;
     }
 
-    if (startAt && endAt) {
+    if (!dateUndecided && !startAt) { setIsError(true); setMessage("開始日時を入力するか、開催日未定にチェックしてください。"); return; }
+
+    if (!dateUndecided && startAt && endAt) {
       const startDate = new Date(startAt);
       const endDate = new Date(endAt);
 
@@ -412,13 +416,13 @@ export default function NewEventPage() {
           description:
             trimmedDescription || null,
 
-          start_at: startAt
+          start_at: !dateUndecided && startAt
             ? new Date(
                 startAt
               ).toISOString()
             : null,
 
-          end_at: endAt
+          end_at: !dateUndecided && endAt
             ? new Date(
                 endAt
               ).toISOString()
@@ -657,35 +661,7 @@ export default function NewEventPage() {
                 />
               </FormField>
 
-              <div className="grid gap-6 sm:grid-cols-2">
-                <FormField label="開始日時">
-                  <input
-                    type="datetime-local"
-                    value={startAt}
-                    onChange={(event) =>
-                      setStartAt(
-                        event.target.value
-                      )
-                    }
-                    disabled={saving}
-                    className={inputClass}
-                  />
-                </FormField>
-
-                <FormField label="終了日時">
-                  <input
-                    type="datetime-local"
-                    value={endAt}
-                    onChange={(event) =>
-                      setEndAt(
-                        event.target.value
-                      )
-                    }
-                    disabled={saving}
-                    className={inputClass}
-                  />
-                </FormField>
-              </div>
+              <EventScheduleFields undecided={dateUndecided} onUndecidedChange={setDateUndecided} startAt={startAt} endAt={endAt} onStartChange={setStartAt} onEndChange={setEndAt} disabled={saving} />
 
               <FormField label="会場">
                 <input

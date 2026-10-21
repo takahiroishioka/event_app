@@ -259,7 +259,7 @@ export default function Home() {
 
                   <div className="min-w-0 p-3 sm:p-4">
                     <div className="flex flex-wrap items-center gap-2">
-                      <span className="rounded-full bg-blue-50 px-2.5 py-1 text-[11px] font-bold text-blue-700">受付中</span>
+                      <span className="rounded-full bg-blue-50 px-2.5 py-1 text-[11px] font-bold text-blue-700">{event.start_at ? "受付中" : "参加希望募集中"}</span>
                       <span className="text-xs font-bold text-neutral-600">{formatFee(event.fee)}</span>
                     </div>
                     <div className="mt-3 space-y-1 text-xs leading-5 text-neutral-500">
