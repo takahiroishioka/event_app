@@ -24,6 +24,7 @@ export default function AdminShareMenu() {
     <section className="mt-8">
       <h2 className="px-1 text-lg font-bold text-neutral-900">共有メニュー</h2>
       <div className="mt-4 grid gap-4 sm:grid-cols-2">
+        <ShareUrlCard label="勉強会開催希望一覧（LINEリッチメニュー用）" path="/study-requests" displayUrl={`${origin}/study-requests`} copied={copiedPath === "/study-requests"} onCopy={copySignupUrl} />
         <ShareUrlCard
           label="UBMサインアップURL"
           path="/signup/ubm"

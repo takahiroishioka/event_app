@@ -247,6 +247,7 @@ export default function AdminPage() {
           </h2>
 
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
+            <AdminMenuCard href="/admin/study-requests" title="勉強会開催希望" description="勉強会の候補を登録し、届いた開催希望と対応状況を確認します。" actionLabel="開催希望を管理" />
             <AdminMenuCard
               href="/admin/events"
               title="イベント管理"
