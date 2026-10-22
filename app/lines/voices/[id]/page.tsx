@@ -16,7 +16,7 @@ const getVoice = cache(async (id: string) => {
   if (error) throw error;
   if (!voice) return null;
   const [lineResult, authorResult] = await Promise.all([
-    supabase.from("voice_lines").select("id, title, body")
+    supabase.from("voice_lines").select("id, title, body, image_url")
       .eq("id", voice.line_id).eq("status", "published").maybeSingle(),
     supabase.rpc("get_public_voice_profile", { p_user_id: voice.user_id }).maybeSingle(),
   ]);
@@ -34,9 +34,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (!data) return { title: "投稿が見つかりません | こえらぼ" };
   const title = `${data.author?.name || "投稿者"}の声「${data.line.title}」 | こえらぼ`;
   const description = data.voice.note || `「${data.line.title}」に投稿された${data.author?.name || "投稿者"}の声を聴く。`;
+  const imageUrl = data.line.image_url || "/lines/opengraph-image";
   return { title, description,
-    openGraph: { ...voiceMetadata.openGraph, title, description, url: `/lines/voices/${id}` },
-    twitter: { ...voiceMetadata.twitter, title, description },
+    openGraph: { ...voiceMetadata.openGraph, title, description, url: `/lines/voices/${id}`, images: [{ url: imageUrl, alt: data.line.title }] },
+    twitter: { ...voiceMetadata.twitter, title, description, images: [imageUrl] },
   };
 }
 
@@ -49,6 +50,12 @@ export default async function VoicePage({ params }: Props) {
   return <><SiteHeader /><main className="min-h-screen bg-neutral-100 px-4 py-8 text-neutral-900 sm:px-6"><div className="mx-auto max-w-3xl">
     <Link href={`/lines/${line.id}`} className="text-sm font-bold text-neutral-600 underline">← このセリフのみんなの声へ</Link>
     <article className="mt-6 overflow-hidden rounded-3xl bg-white shadow-sm">
+      {line.image_url && (
+        <Link href={`/lines/${line.id}`} className="block bg-neutral-100">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={line.image_url} alt={line.title} className="max-h-96 w-full object-contain" />
+        </Link>
+      )}
       <div className="bg-gradient-to-br from-blue-50 to-indigo-50 p-6 sm:p-10">
         <p className="text-xs font-bold tracking-widest text-blue-600">KOELABO · VOICE</p>
         <div className="mt-5 flex flex-wrap items-start justify-between gap-4">
