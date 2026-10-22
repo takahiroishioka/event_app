@@ -29,7 +29,7 @@ export default function StudyRequestsPage() {
     try {
       const supabase = createClient();
       const [result, footer] = await Promise.all([
-        supabase.from("study_topics").select("id, title, description, is_active, sort_order").eq("is_active", true).order("sort_order").order("created_at"),
+        supabase.from("study_topics").select("id, title, description, image_url, is_active, sort_order").eq("is_active", true).order("sort_order").order("created_at"),
         supabase.from("footer_settings").select("line_url").eq("id", true).maybeSingle(),
       ]);
       if (result.error) throw result.error;
@@ -72,7 +72,10 @@ export default function StudyRequestsPage() {
     {sentTitle && <section ref={successRef} role="status" className="mt-6 rounded-3xl border border-green-200 bg-green-50 p-6"><h2 className="text-xl font-bold text-green-800">開催希望を受け付けました</h2><p className="mt-3 text-sm leading-7 text-green-900">「{sentTitle}」のご希望を管理者へ届けました。開催・参加の確定ではありません。日程については公式LINEでご案内します。</p>{lineUrl && <a href={lineUrl} target="_blank" rel="noopener noreferrer" className="mt-4 inline-block rounded-xl bg-green-600 px-5 py-3 text-sm font-bold text-white">公式LINEを開く</a>}</section>}
     {loadError && <div role="alert" className="mt-6 rounded-xl bg-red-50 p-5 text-sm text-red-700"><p>{loadError}</p><button type="button" onClick={() => void load()} className="mt-3 font-bold underline">再読み込み</button></div>}
     {loading ? <p role="status" className="py-12 text-center text-neutral-500">読み込み中…</p> : !loadError && <section className="mt-6 grid gap-5 sm:grid-cols-2" aria-label="募集中の勉強会">
-      {topics.map((topic) => <article key={topic.id} className={`flex flex-col rounded-3xl border-2 bg-white p-6 shadow-sm ${selectedId === topic.id ? "border-blue-500" : "border-transparent"}`}><h2 className="text-xl font-bold">{topic.title}</h2><p className="mt-3 flex-1 whitespace-pre-wrap break-words text-sm leading-7 text-neutral-600">{topic.description || "内容の詳細はお問い合わせください。"}</p><button type="button" disabled={saving} onClick={() => { setSelectedId(topic.id); setError(""); setSentTitle(""); requestId.current = null; }} className="mt-5 rounded-xl bg-blue-600 px-5 py-3 text-sm font-bold text-white disabled:opacity-50">この勉強会の開催を希望する</button></article>)}
+      {topics.map((topic) => <article key={topic.id} className={`flex flex-col rounded-3xl border-2 bg-white p-6 shadow-sm ${selectedId === topic.id ? "border-blue-500" : "border-transparent"}`}>{topic.image_url && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={topic.image_url} alt={topic.title} className="mb-4 aspect-video w-full rounded-xl bg-neutral-100 object-contain" />
+      )}<h2 className="text-xl font-bold">{topic.title}</h2><p className="mt-3 flex-1 whitespace-pre-wrap break-words text-sm leading-7 text-neutral-600">{topic.description || "内容の詳細はお問い合わせください。"}</p><button type="button" disabled={saving} onClick={() => { setSelectedId(topic.id); setError(""); setSentTitle(""); requestId.current = null; }} className="mt-5 rounded-xl bg-blue-600 px-5 py-3 text-sm font-bold text-white disabled:opacity-50">この勉強会の開催を希望する</button></article>)}
       {!topics.length && <p className="rounded-3xl bg-white p-8 text-center text-neutral-500 sm:col-span-2">現在、勉強会の候補を準備中です。</p>}
     </section>}
     {selected && <section ref={formRef} id="study-request-form" className="mt-8 scroll-mt-6 rounded-3xl bg-white p-6 shadow-sm sm:p-8"><h2 className="text-2xl font-bold">「{selected.title}」の開催希望</h2><form onSubmit={submit} className="mt-5 space-y-5"><fieldset disabled={saving} className="space-y-5">
