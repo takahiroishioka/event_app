@@ -240,9 +240,8 @@ export default function Home() {
         {!loading && !errorMessage && visibleEvents.length > 0 && (
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
             {visibleEvents.map((event) => (
-              <Link key={event.id} href={`/events/${event.id}`} className="block overflow-hidden rounded-2xl bg-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
-                <div className="grid grid-cols-[55%_45%]">
-                  <div className="aspect-video overflow-hidden bg-neutral-200">
+              <Link key={event.id} href={`/events/${event.id}`} className="flex h-full flex-col overflow-hidden rounded-2xl bg-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
+                  <div className="aspect-video w-full shrink-0 overflow-hidden bg-neutral-200">
                     {event.image_url ? (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img
@@ -257,8 +256,13 @@ export default function Home() {
                     )}
                   </div>
 
-                  <div className="min-w-0 p-3 sm:p-4">
-                    <div className="flex flex-wrap items-center gap-2">
+                <div className="flex min-w-0 flex-1 flex-col p-4 sm:p-5">
+                  <h3 className="w-full text-base font-bold leading-6 text-neutral-900 sm:text-lg">{event.title}</h3>
+                  <p className="mt-2 line-clamp-2 w-full text-xs leading-5 text-neutral-600 sm:text-sm">
+                    {event.description || "イベントの詳細をご確認ください。"}
+                  </p>
+                  <div className="mt-auto pt-4">
+                    <div className="flex flex-wrap items-center gap-2 border-t border-neutral-100 pt-4">
                       <span className="rounded-full bg-blue-50 px-2.5 py-1 text-[11px] font-bold text-blue-700">{event.start_at ? "受付中" : "参加希望募集中"}</span>
                       <span className="text-xs font-bold text-neutral-600">{formatFee(event.fee)}</span>
                     </div>
@@ -267,13 +271,6 @@ export default function Home() {
                       <p>{event.location || "会場未定"}</p>
                     </div>
                   </div>
-                </div>
-
-                <div className="border-t border-neutral-100 p-4 sm:p-5">
-                  <h3 className="w-full text-base font-bold leading-6 text-neutral-900 sm:text-lg">{event.title}</h3>
-                  <p className="mt-2 line-clamp-2 w-full text-xs leading-5 text-neutral-600 sm:text-sm">
-                    {event.description || "イベントの詳細をご確認ください。"}
-                  </p>
                 </div>
               </Link>
             ))}

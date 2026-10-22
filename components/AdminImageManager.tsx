@@ -100,7 +100,10 @@ export default function AdminImageManager({
   }
 
   async function updateImage(id: string, values: Partial<SiteImage>) {
+    if (readOnly || saving) return;
     setSaving(true);
+    setMessage("");
+    try {
     const { data: updatedImage, error } = await supabase
       .from("site_images")
       .update(values)
@@ -110,10 +113,12 @@ export default function AdminImageManager({
     setMessage(error
       ? `更新できませんでした：${error.message}`
       : updatedImage
-        ? "画像を更新しました。"
+        ? "画像の設定を保存しました。"
         : "更新できませんでした。編集権限を確認してください。");
-    if (updatedImage) await loadImages();
-    setSaving(false);
+    if (updatedImage) setImages((current) => current.map((row) => row.id === id ? { ...row, ...values } : row));
+    } catch {
+      setMessage("保存できませんでした。通信状態を確認して再度お試しください。");
+    } finally { setSaving(false); }
   }
 
   async function replaceImage(id: string, inputEvent: ChangeEvent<HTMLInputElement>) {
@@ -185,7 +190,7 @@ export default function AdminImageManager({
   return (
     <section className="rounded-3xl bg-white p-6 shadow-sm sm:p-8">
       <h2 className="text-xl font-bold text-neutral-900">カルーセル画像</h2>
-      <p className="mt-2 text-sm text-neutral-500">複数登録できます。表示は16:9、数字が小さい順に表示されます。</p>
+      <p className="mt-2 text-sm text-neutral-500">複数登録できます。表示は16:9、数字が小さい順に表示されます。リンク先などを編集したら、各画像の「設定を保存」を押してください。</p>
       <label className="mt-5 block text-sm font-bold">画像の説明（任意）
         <input value={altText} onChange={(event) => setAltText(event.target.value)} className="mt-2 w-full rounded-xl border border-neutral-300 p-3 font-normal" />
       </label>
@@ -206,32 +211,36 @@ export default function AdminImageManager({
                   value={image.alt_text ?? ""}
                   disabled={saving || readOnly}
                   onChange={(event) => setImages((current) => current.map((row) => row.id === image.id ? { ...row, alt_text: event.target.value } : row))}
-                  onBlur={(event) => void updateImage(image.id, { alt_text: event.target.value.trim() || null })}
                   className="mt-2 w-full rounded-lg border border-neutral-300 px-3 py-2 font-normal text-neutral-900"
                 />
               </label>
               <div className="flex items-center gap-3">
                 <label className="flex items-center gap-2 text-sm">
-                  <input type="checkbox" checked={image.is_active} disabled={saving || readOnly} onChange={(event) => updateImage(image.id, { is_active: event.target.checked })} /> 公開
+                  <input type="checkbox" checked={image.is_active} disabled={saving || readOnly} onChange={(event) => setImages((current) => current.map((row) => row.id === image.id ? { ...row, is_active: event.target.checked } : row))} /> 公開
                 </label>
                 <label className="ml-auto text-sm">順番
-                  <input type="number" value={image.sort_order} disabled={saving || readOnly} onChange={(event) => updateImage(image.id, { sort_order: Number(event.target.value) })} className="ml-2 w-16 rounded-lg border p-2" />
+                  <input type="number" value={image.sort_order} disabled={saving || readOnly} onChange={(event) => setImages((current) => current.map((row) => row.id === image.id ? { ...row, sort_order: Number(event.target.value) } : row))} className="ml-2 w-16 rounded-lg border p-2" />
                 </label>
               </div>
               {placement === "top" && <>
-                <label className="mt-4 block text-sm font-bold">表示対象<select value={image.audience ?? "all"} disabled={saving || readOnly} onChange={(event) => { const value = event.target.value as "all" | "general" | "ubm"; setImages((current) => current.map((row) => row.id === image.id ? { ...row, audience: value } : row)); void updateImage(image.id, { audience: value }); }} className="mt-2 w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 font-normal"><option value="all">全員</option><option value="general">一般ユーザー</option><option value="ubm">UBMユーザー</option></select></label>
+                <label className="mt-4 block text-sm font-bold">表示対象<select value={image.audience ?? "all"} disabled={saving || readOnly} onChange={(event) => { const value = event.target.value as "all" | "general" | "ubm"; setImages((current) => current.map((row) => row.id === image.id ? { ...row, audience: value } : row)); }} className="mt-2 w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 font-normal"><option value="all">全員</option><option value="general">一般ユーザー</option><option value="ubm">UBMユーザー</option></select></label>
                 <label className="mt-4 block text-sm font-bold">リンク先（任意）
                   <input
                     type="url"
                     value={image.link_url ?? ""}
-                    disabled={saving}
+                    disabled={saving || readOnly}
                     placeholder="https://..."
                     onChange={(event) => setImages((current) => current.map((row) => row.id === image.id ? { ...row, link_url: event.target.value } : row))}
-                    onBlur={(event) => void updateImage(image.id, { link_url: event.target.value.trim() || null })}
                     className="mt-2 w-full rounded-lg border border-neutral-300 px-3 py-2 font-normal text-neutral-900"
                   />
                 </label>
               </>}
+              {!readOnly && <button type="button" disabled={saving} onClick={() => {
+                const link = image.link_url?.trim() || null;
+                if (link && !/^https?:\/\//i.test(link)) { setMessage("リンク先はhttp://またはhttps://で始まるURLを入力してください。"); return; }
+                if (!Number.isInteger(image.sort_order)) { setMessage("順番は整数で入力してください。"); return; }
+                void updateImage(image.id, { alt_text: image.alt_text?.trim() || null, sort_order: image.sort_order, is_active: image.is_active, ...(placement === "top" ? { link_url: link, audience: image.audience } : {}) });
+              }} className="mt-4 mr-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-bold text-white disabled:opacity-50">{saving ? "保存中…" : "設定を保存"}</button>}
       {!readOnly && <label className="mt-4 inline-flex cursor-pointer rounded-lg border border-blue-300 px-3 py-2 text-sm font-bold text-blue-700">
                 {saving ? "処理中…" : "画像を変更"}
                 <input type="file" accept="image/jpeg,image/png,image/webp,image/gif" disabled={saving} onChange={(event) => void replaceImage(image.id, event)} className="hidden" />
