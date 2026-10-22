@@ -449,7 +449,7 @@ export default function MyPage() {
               </p>
             </div>
           ) : (
-            <div className="space-y-5">
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
               {joinedEvents.map((event) => (
                 <EventCard
                   key={event.id}
@@ -485,7 +485,7 @@ export default function MyPage() {
               </p>
             </div>
           ) : (
-            <div className="space-y-5">
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
               {allEvents.map((event) => (
                 <EventCard
                   key={event.id}
@@ -508,9 +508,9 @@ export default function MyPage() {
             {showPastEvents && (
               <div className="mt-6">
                 <EventMonthCalendar month={selectedPastMonth} events={pastEvents} onChange={setPastMonth} />
-                <div className="space-y-5">
+                <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
                   {monthlyPastEvents.map((event) => <EventCard key={event.id} event={event} past />)}
-                  {monthlyPastEvents.length === 0 && <p className="rounded-2xl bg-white p-8 text-center text-neutral-500">この月の過去のイベントはありません。</p>}
+                  {monthlyPastEvents.length === 0 && <p className="col-span-full rounded-2xl bg-white p-8 text-center text-neutral-500">この月の過去のイベントはありません。</p>}
                 </div>
               </div>
             )}
@@ -540,10 +540,9 @@ function EventCard({
   return (
     <Link
       href={`/events/${event.id}`}
-      className="block overflow-hidden rounded-2xl bg-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+      className="flex h-full flex-col overflow-hidden rounded-2xl bg-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
     >
-      <div className="grid grid-cols-[55%_45%]">
-        <div className="aspect-video overflow-hidden bg-neutral-200">
+        <div className="aspect-video w-full shrink-0 overflow-hidden bg-neutral-200">
           {event.image_url ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
@@ -558,8 +557,15 @@ function EventCard({
           )}
         </div>
 
-        <div className="min-w-0 p-3 sm:p-5">
-          <div className="flex flex-wrap items-center gap-2">
+      <div className="flex min-w-0 flex-1 flex-col p-4 sm:p-5">
+        <h3 className="w-full text-base font-bold leading-6 text-neutral-900 sm:text-lg">
+          {event.title}
+        </h3>
+        <p className="mt-2 line-clamp-2 w-full text-xs leading-5 text-neutral-600 sm:text-sm">
+          {event.description || "イベントの詳細をご確認ください。"}
+        </p>
+        <div className="mt-auto pt-4">
+          <div className="flex flex-wrap items-center gap-2 border-t border-neutral-100 pt-4">
             <span className={`rounded-full px-2.5 py-1 text-[11px] font-bold ${past ? "bg-neutral-200 text-neutral-700" : joined ? "bg-green-100 text-green-700" : "bg-neutral-100 text-neutral-600"}`}>
               {past ? "開催終了" : joined ? "参加予定" : event.start_at ? "受付中" : "参加希望募集中"}
             </span>
@@ -572,14 +578,6 @@ function EventCard({
         </div>
       </div>
 
-      <div className="border-t border-neutral-100 p-4 sm:p-5">
-        <h3 className="w-full text-base font-bold leading-6 text-neutral-900 sm:text-lg">
-          {event.title}
-        </h3>
-        <p className="mt-2 line-clamp-2 w-full text-xs leading-5 text-neutral-600 sm:text-sm">
-          {event.description || "イベントの詳細をご確認ください。"}
-        </p>
-      </div>
     </Link>
   );
 }
