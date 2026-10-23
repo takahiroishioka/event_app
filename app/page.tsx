@@ -8,6 +8,7 @@ import SiteHeader from "@/components/SiteHeader";
 import BannerSection, { type Banner } from "@/components/BannerSection";
 import { attachEventPreviewImages } from "@/lib/event-images";
 import SocialFooter from "@/components/SocialFooter";
+import TopPageIntro from "@/components/TopPageIntro";
 
 type EventRow = {
   id: string;
@@ -24,6 +25,7 @@ type TopPageSettings = {
   site_name: string;
   hero_title: string;
   hero_description: string;
+  hero_youtube_url?: string | null;
 };
 
 const defaultSettings: TopPageSettings = {
@@ -83,7 +85,7 @@ export default function Home() {
           .order("sort_order"),
         supabase
           .from("top_page_settings")
-          .select("site_name, hero_title, hero_description")
+          .select("*")
           .eq("id", true)
           .maybeSingle(),
         supabase
@@ -170,17 +172,7 @@ export default function Home() {
         </div>
       )}
 
-      <section className="bg-white px-4 py-16 text-neutral-900 sm:px-6 sm:py-20">
-        <div className="mx-auto max-w-6xl">
-          <p className="text-sm font-bold tracking-widest text-blue-600">EVENTS</p>
-          <h1 className="mt-4 text-4xl font-black tracking-tight sm:text-5xl">
-            {settings.hero_title}
-          </h1>
-          <p className="mt-5 max-w-2xl text-base leading-7 text-neutral-600">
-            {settings.hero_description}
-          </p>
-        </div>
-      </section>
+      <TopPageIntro title={settings.hero_title} description={settings.hero_description} youtubeUrl={settings.hero_youtube_url} />
 
       <section className="mx-auto max-w-6xl px-4 py-12 sm:px-6 sm:py-16">
         <div className="mb-7 flex items-end justify-between gap-4">
