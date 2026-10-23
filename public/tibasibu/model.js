@@ -46,7 +46,7 @@ export function selectMeetings(rows, { filter = 'all', search = '', sort = 'desc
 }
 
 export class SupabaseRepository {
-  constructor(config, fetcher = fetch) { this.config = config; this.fetcher = fetcher; }
+  constructor(config, fetcher = (input, init) => globalThis.fetch(input, init)) { this.config = config; this.fetcher = fetcher; }
   headers(extra = {}) {
     const headers = { apikey: this.config.key, ...extra };
     if (!this.config.key.startsWith('sb_publishable_')) headers.Authorization = `Bearer ${this.config.key}`;
