@@ -19,3 +19,6 @@ dialog{overflow:hidden}
 #meeting-form{display:flex;flex-direction:column;max-height:calc(100dvh - 50px)}
 .dialog-heading,.dialog-footer{flex-shrink:0}
 .dialog-body{overflow-y:auto;min-height:0}
+
+/* Match the shared site background in this standalone page. */
+body, main { background-color: #f8fbff; background-image: url("/backgrounds/data-hologram-background.png"); background-size: cover; background-position: center; background-repeat: no-repeat; background-attachment: fixed; }

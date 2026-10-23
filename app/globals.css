@@ -1,15 +1,5 @@
 @import "tailwindcss";
 
-@media (min-width: 1024px) {
-  .event-detail-background {
-    background-color: #f8fbff;
-    background-image: url("/backgrounds/data-hologram-background.png");
-    background-size: cover;
-    background-position: center;
-    background-repeat: no-repeat;
-    background-attachment: fixed;
-  }
-}
 
 :root {
   --background: #ffffff;
@@ -52,4 +42,14 @@ body {
 .admin-area option {
   color: #171717;
   background-color: #ffffff;
+}
+
+/* Shared page background; cards, headers, and form surfaces keep their own backgrounds. */
+body, main {
+  background-color: #f8fbff;
+  background-image: url("/backgrounds/data-hologram-background.png");
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-attachment: fixed;
 }
