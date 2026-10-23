@@ -1,14 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import ShareLinkButton from "@/components/ShareLinkButton";
-import StudyTopicImageInput from "@/components/StudyTopicImageInput";
 import { studyTopicDetails, requestStatuses, type StudyHoldingRequest, type StudyRequestStatus, type StudyTopic } from "@/lib/study-requests";
 
-const emptyTopic = { title: "", description: "", image_url: "", meeting_format: "", fee: "", is_active: true, sort_order: 0 };
 function errorText(cause: unknown) { return cause && typeof cause === "object" && "message" in cause ? String(cause.message) : "通信状態を確認してください。"; }
 
 export default function AdminStudyRequestsPage() {
@@ -21,16 +19,13 @@ export default function AdminStudyRequestsPage() {
   const [statusFilter, setStatusFilter] = useState<StudyRequestStatus | "all">("all");
   const [topicFilter, setTopicFilter] = useState("");
   const [search, setSearch] = useState("");
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [form, setForm] = useState(emptyTopic);
-  const [imageFile, setImageFile] = useState<File | null>(null);
-  const [saving, setSaving] = useState(false);
   const [updating, setUpdating] = useState("");
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
 
   const load = useCallback(async () => {
     setLoading(true); setError("");
+    if (new URLSearchParams(window.location.search).get("tab") === "topics") setTab("topics");
     try {
       const supabase = createClient();
       const { data: { user }, error: authError } = await supabase.auth.getUser();
@@ -52,37 +47,6 @@ export default function AdminStudyRequestsPage() {
     finally { setLoading(false); }
   }, [router]);
   useEffect(() => { const timer = window.setTimeout(() => void load(), 0); return () => window.clearTimeout(timer); }, [load]);
-
-  async function saveTopic(event: FormEvent) {
-    event.preventDefault();
-    if (saving || !form.title.trim()) return;
-    if (!["zoom", "in_person"].includes(form.meeting_format)) { setError("Zoomまたはリアルを選択してください。"); return; }
-    const fee = Number(form.fee);
-    if (!form.fee.trim() || !Number.isInteger(fee) || fee < 0 || fee > 2147483647) { setError("金額は0以上の整数で入力してください。"); return; }
-    setSaving(true); setError(""); setMessage("");
-    try {
-      const supabase = createClient();
-      let imageUrl = form.image_url || null;
-      let uploadedPath: string | null = null;
-      if (imageFile) {
-        const extensions: Record<string, string> = { "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp", "image/gif": "gif" };
-        if (!extensions[imageFile.type] || imageFile.size > 5 * 1024 * 1024) throw new Error("5MB以下のJPEG・PNG・WebP・GIFを選択してください。");
-        uploadedPath = `study-topics/${crypto.randomUUID()}.${extensions[imageFile.type]}`;
-        const upload = await supabase.storage.from("event-images").upload(uploadedPath, imageFile, { contentType: imageFile.type, upsert: false });
-        if (upload.error) throw new Error(`画像をアップロードできませんでした：${upload.error.message}`);
-        imageUrl = supabase.storage.from("event-images").getPublicUrl(uploadedPath).data.publicUrl;
-      }
-      const values = { title: form.title.trim(), description: form.description.trim() || null, image_url: imageUrl, meeting_format: form.meeting_format, fee, is_active: form.is_active, sort_order: form.sort_order, updated_at: new Date().toISOString() };
-      const result = editingId ? await supabase.from("study_topics").update(values).eq("id", editingId).select("id").single()
-        : await supabase.from("study_topics").insert(values).select("id").single();
-      if (result.error) {
-        if (uploadedPath) await supabase.storage.from("event-images").remove([uploadedPath]);
-        throw result.error;
-      }
-      setEditingId(null); setForm(emptyTopic); setImageFile(null); setMessage("勉強会の候補を保存しました。"); await load();
-    } catch (cause) { setError(`保存できませんでした：${errorText(cause)}`); }
-    finally { setSaving(false); }
-  }
 
   async function updateStatus(request: StudyHoldingRequest, status: StudyRequestStatus) {
     if (updating) return;
@@ -113,9 +77,21 @@ export default function AdminStudyRequestsPage() {
         <p className="my-5 text-sm text-neutral-500">{visible.length}件</p>
         <div className="space-y-5">{visible.map((row) => <article key={row.id} className="rounded-3xl bg-white p-6 shadow-sm"><div className="flex flex-wrap items-start justify-between gap-4"><div><p className="text-xs text-neutral-500">{new Date(row.created_at).toLocaleString("ja-JP", { timeZone: "Asia/Tokyo" })}</p><h2 className="mt-2 text-xl font-bold">{row.topic_title}</h2><p className="mt-2 text-sm font-bold text-blue-700">LINE登録名：{row.line_name}</p></div><label className="text-xs font-bold text-neutral-500">対応状況<select value={row.status} disabled={Boolean(updating)} onChange={(event) => void updateStatus(row, event.target.value as StudyRequestStatus)} className={inputClass}>{Object.entries(requestStatuses).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label></div><dl className="mt-5 space-y-4 text-sm"><div><dt className="font-bold text-neutral-500">希望する曜日・時間帯</dt><dd className="mt-1 whitespace-pre-wrap break-words">{row.preferred_schedule || "指定なし"}</dd></div>{row.message && <div><dt className="font-bold text-neutral-500">メッセージ</dt><dd className="mt-1 whitespace-pre-wrap break-words">{row.message}</dd></div>}</dl></article>)}</div>
         {!visible.length && <p className="rounded-3xl bg-white p-10 text-center text-neutral-500">該当する開催希望はありません。</p>}
-      </> : <div className="grid gap-6 lg:grid-cols-[380px_1fr]">
-        <form onSubmit={saveTopic} className="h-fit rounded-3xl bg-white p-6 shadow-sm"><h2 className="text-xl font-bold">{editingId ? "勉強会を編集" : "勉強会を登録"}</h2><fieldset disabled={saving} className="mt-5 space-y-5"><label className="block text-sm font-bold">勉強会名<input required maxLength={150} value={form.title} onChange={(event) => setForm({ ...form, title: event.target.value })} className={inputClass} /></label><label className="block text-sm font-bold">説明（一覧では3行まで表示）<textarea rows={3} maxLength={3000} value={form.description} onChange={(event) => setForm({ ...form, description: event.target.value })} className={inputClass} /></label><label className="block text-sm font-bold">開催形式<select required value={form.meeting_format} onChange={(event) => setForm({ ...form, meeting_format: event.target.value })} className={inputClass}><option value="">選択してください</option><option value="zoom">Zoom</option><option value="in_person">リアル</option></select></label><label className="block text-sm font-bold">金額（円）<input type="number" required min={0} max={2147483647} step={1} value={form.fee} onChange={(event) => setForm({ ...form, fee: event.target.value })} placeholder="無料の場合は0" className={inputClass} /></label><StudyTopicImageInput file={imageFile} imageUrl={form.image_url} onChange={(file) => { setImageFile(file); if (!file) setForm({ ...form, image_url: "" }); }} /><label className="block text-sm font-bold">表示順<input type="number" required step={1} value={form.sort_order} onChange={(event) => setForm({ ...form, sort_order: event.target.valueAsNumber })} className={inputClass} /></label><label className="flex items-center gap-2 text-sm font-bold"><input type="checkbox" checked={form.is_active} onChange={(event) => setForm({ ...form, is_active: event.target.checked })} />公開して開催希望を受け付ける</label><button className="w-full rounded-xl bg-blue-600 px-5 py-3 font-bold text-white">{saving ? "保存中…" : "保存する"}</button>{editingId && <button type="button" onClick={() => { setEditingId(null); setForm(emptyTopic); setImageFile(null); }} className="w-full text-sm font-bold text-neutral-500">編集をやめる</button>}</fieldset></form>
-        <div className="space-y-4">{topics.map((topic) => <article key={topic.id} className="rounded-3xl bg-white p-6 shadow-sm"><span className={`rounded-full px-3 py-1 text-xs font-bold ${topic.is_active ? "bg-green-50 text-green-700" : "bg-neutral-100 text-neutral-500"}`}>{topic.is_active ? "公開中" : "非公開"}</span><h2 className="mt-3 text-xl font-bold">{topic.title}</h2><p className="mt-3 line-clamp-3 whitespace-pre-wrap break-words text-sm leading-7 text-neutral-600">{topic.description}</p><p className="mt-3 text-sm font-bold text-blue-700">{studyTopicDetails(topic)}</p><p className="mt-3 text-xs text-neutral-500">開催希望 {requests.filter((row) => row.topic_id === topic.id).length}件</p><button type="button" onClick={() => { setEditingId(topic.id); setImageFile(null); setForm({ meeting_format: topic.meeting_format ?? "", fee: topic.fee == null ? "" : String(topic.fee), image_url: topic.image_url ?? "", title: topic.title, description: topic.description ?? "", is_active: topic.is_active, sort_order: topic.sort_order }); }} className="mt-4 text-sm font-bold text-blue-700 underline">編集する</button></article>)}{!topics.length && <p className="rounded-3xl bg-white p-8 text-center text-neutral-500">左のフォームから、勉強会の候補を登録してください。</p>}</div>
+      </> : <div>
+        <Link href="/admin/study-requests/new" className="mb-6 inline-block rounded-xl bg-blue-600 px-5 py-3 font-bold text-white">勉強会を新規登録</Link>
+        <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-4">{topics.map((topic) => <article key={topic.id} className="flex flex-col overflow-hidden rounded-2xl bg-white shadow-sm">
+          <Link href={`/admin/study-requests/${topic.id}/edit`} className="block aspect-video bg-neutral-200" aria-label={`${topic.title}を編集`}>
+            {topic.image_url ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={topic.image_url} alt={topic.title} className="h-full w-full object-cover" />
+            ) : <span className="flex h-full items-center justify-center text-sm text-neutral-500">画像未登録</span>}
+          </Link>
+          <div className="flex flex-1 flex-col p-4"><span className="text-xs font-bold text-neutral-500">{topic.is_active ? "公開中" : "非公開"}</span>
+          <h2 className="mt-2 break-words text-lg font-bold">{topic.title}</h2><p className="mt-3 line-clamp-3 whitespace-pre-wrap break-words text-sm leading-6 text-neutral-600">{topic.description}</p>
+          <p className="mt-auto pt-4 text-sm font-bold text-blue-700">{studyTopicDetails(topic)}</p><p className="mt-2 text-xs text-neutral-500">開催希望 {requests.filter((row) => row.topic_id === topic.id).length}件</p>
+          <Link href={`/admin/study-requests/${topic.id}/edit`} className="mt-4 rounded-xl border border-blue-200 px-4 py-2 text-center text-sm font-bold text-blue-700">編集する</Link></div>
+        </article>)}</div>
+        {!topics.length && <p className="rounded-3xl bg-white p-8 text-center">「勉強会を新規登録」から登録してください。</p>}
       </div>}
     </>}
   </div></main>;
