@@ -1,8 +1,16 @@
 export type StudyTopic = {
   id: string; title: string; description: string | null;
   image_url: string | null;
+  meeting_format: "zoom" | "in_person" | null;
+  fee: number | null;
   is_active: boolean; sort_order: number;
 };
+
+export function studyTopicDetails(topic: Pick<StudyTopic, "meeting_format" | "fee">) {
+  const format = topic.meeting_format === "zoom" ? "Zoom" : topic.meeting_format === "in_person" ? "リアル" : "開催形式未定";
+  const fee = topic.fee == null ? "金額未定" : topic.fee === 0 ? "無料" : `${topic.fee.toLocaleString("ja-JP")}円`;
+  return `${format} ・ ${fee}`;
+}
 
 export const requestStatuses = { new: "未対応", contacted: "連絡済み", completed: "対応完了" } as const;
 export type StudyRequestStatus = keyof typeof requestStatuses;
