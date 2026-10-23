@@ -44,7 +44,7 @@ body {
   background-color: #ffffff;
 }
 
-/* Shared page background; cards, headers, and form surfaces keep their own backgrounds. */
+/* Shared page background. */
 body, main {
   background-color: #f8fbff;
   background-image: url("/backgrounds/data-hologram-background.png");
@@ -52,4 +52,10 @@ body, main {
   background-position: center;
   background-repeat: no-repeat;
   background-attachment: fixed;
+}
+
+/* Apply the same translucent white surface across pages, without fading content.
+   Native controls keep an opaque background for legibility. */
+.bg-white:not(main):not(input):not(textarea):not(select):not(option):not(button) {
+  background-color: rgb(255 255 255 / 70%);
 }

@@ -92,7 +92,7 @@ export default function SiteHeader({ siteName = "TYPESTYLE EVENT" }: { siteName?
   }
 
   return (
-    <header className="relative z-50 border-b border-neutral-200 bg-white">
+    <header className="sticky top-0 z-50 border-b border-neutral-200 bg-white/70 backdrop-blur">
       <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-5 sm:px-6">
         <Link href={homePath} className="text-lg font-black tracking-tight text-neutral-900">
           <span className={siteNameLoaded ? undefined : "invisible"}>
@@ -119,7 +119,7 @@ export default function SiteHeader({ siteName = "TYPESTYLE EVENT" }: { siteName?
             </button>
 
             {menuOpen && (
-              <nav className="absolute right-0 top-14 w-52 overflow-hidden rounded-2xl border border-neutral-200 bg-white p-2 shadow-xl">
+              <nav className="absolute right-0 top-14 max-h-[calc(100dvh-7rem)] w-52 overflow-y-auto rounded-2xl border border-neutral-200 bg-white p-2 shadow-xl">
                 <Link href={homePath} onClick={() => setMenuOpen(false)} className="block rounded-xl px-4 py-3 text-sm font-bold text-neutral-800 hover:bg-neutral-100">TOP</Link>
                 {isVoiceSite && <Link href="/" onClick={() => setMenuOpen(false)} className="block rounded-xl px-4 py-3 text-sm font-bold text-neutral-800 hover:bg-neutral-100">イベントアプリ</Link>}
                 <Link href="/lines" onClick={() => setMenuOpen(false)} className="block rounded-xl px-4 py-3 text-sm font-bold text-neutral-800 hover:bg-neutral-100">こえらぼ</Link>
