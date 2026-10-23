@@ -1,7 +1,11 @@
+import { isTibasibuPath } from "./lib/tibasibu/public-path";
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
 export async function proxy(request: NextRequest) {
+  // tibasibu: independent public module; do not read the event app session.
+  if (isTibasibuPath(request.nextUrl.pathname)) return NextResponse.next();
+
   let response = NextResponse.next({
     request,
   });
