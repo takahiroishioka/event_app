@@ -7,7 +7,7 @@ export default function TopPageIntro({ title, description, youtubeUrl }: {
 }) {
   const videoId = youtubeUrl ? youtubeVideoId(youtubeUrl) : null;
   return (
-    <section className="bg-white px-4 py-16 text-neutral-900 sm:px-6 sm:py-20">
+    <section className="bg-white/70 px-4 py-16 text-neutral-900 sm:px-6 sm:py-20">
       <div className={`mx-auto max-w-6xl ${videoId ? "grid items-center gap-8 lg:grid-cols-2 lg:gap-12" : ""}`}>
         {videoId && <div className="aspect-video overflow-hidden rounded-2xl bg-neutral-900">
           <iframe src={`https://www.youtube.com/embed/${videoId}`} title={`${title}のYouTube動画`} loading="lazy" referrerPolicy="strict-origin-when-cross-origin" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowFullScreen className="h-full w-full border-0" />
