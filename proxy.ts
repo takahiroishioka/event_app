@@ -50,6 +50,8 @@ export async function proxy(request: NextRequest) {
 
   const isPublicPage =
     pathname === "/" ||
+    pathname === "/event-app-service" || pathname === "/event-app-service/" ||
+    pathname === "/event-app-service/opengraph-image" ||
     pathname === "/study-requests" || pathname === "/study-requests/" ||
     isPublicEventDetail ||
     pathname === "/lines" ||

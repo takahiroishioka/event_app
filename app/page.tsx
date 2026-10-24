@@ -44,6 +44,7 @@ const defaultFooterSettings = {
 
 export default function Home() {
   const [events, setEvents] = useState<EventRow[]>([]);
+  const [introBanners, setIntroBanners] = useState<CarouselImage[]>([]);
   const [topImages, setTopImages] = useState<CarouselImage[]>([]);
   const [settings, setSettings] = useState<TopPageSettings>(defaultSettings);
   const [banners, setBanners] = useState<Banner[]>([]);
@@ -81,8 +82,8 @@ export default function Home() {
           .order("start_at", { ascending: true, nullsFirst: false }),
         supabase
           .from("site_images")
-          .select("id, image_url, alt_text, link_url, audience")
-          .eq("placement", "top")
+          .select("id, image_url, alt_text, link_url, audience, placement")
+          .in("placement", ["top", "top_intro"])
           .eq("is_active", true)
           .order("sort_order"),
         supabase
@@ -127,7 +128,9 @@ export default function Home() {
       }
 
       if (!imageResult.error) {
-        setTopImages((imageResult.data ?? []).filter((image) => contentAudience === "general" || !image.audience || image.audience === "all" || image.audience === "ubm") as CarouselImage[]);
+        const visibleImages = (imageResult.data ?? []).filter((image) => contentAudience === "general" || !image.audience || image.audience === "all" || image.audience === "ubm");
+        setTopImages(visibleImages.filter((image) => image.placement === "top"));
+        setIntroBanners(visibleImages.filter((image) => image.placement === "top_intro"));
       }
 
       if (!settingsResult.error && settingsResult.data) {
@@ -175,6 +178,14 @@ export default function Home() {
       )}
 
       <TopPageIntro title={settings.hero_title} description={settings.hero_description} youtubeUrl={settings.hero_youtube_url} />
+
+      {introBanners.length > 0 && <section aria-label="お知らせ" className="mx-auto max-w-6xl space-y-4 px-4 pt-8 sm:px-6">
+        {introBanners.map((banner) => {
+          // eslint-disable-next-line @next/next/no-img-element
+          const image = <img src={banner.image_url} alt={banner.alt_text || "お知らせバナー"} loading="lazy" className="aspect-[5/1] w-full object-contain" />;
+          return banner.link_url ? <Link key={banner.id} href={banner.link_url} className="block overflow-hidden rounded-xl bg-white shadow-sm transition hover:opacity-90">{image}</Link> : <div key={banner.id} className="overflow-hidden rounded-xl bg-white shadow-sm">{image}</div>;
+        })}
+      </section>}
 
       <section className="mx-auto max-w-6xl px-4 py-12 sm:px-6 sm:py-16">
         <div className="mb-7 flex items-end justify-between gap-4">

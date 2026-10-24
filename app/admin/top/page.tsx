@@ -112,6 +112,11 @@ export default function AdminTopPage() {
         </form>
 
         <div className="mt-6">
+          <AdminImageManager placement="top_intro" />
+          <Link href="/admin/service" className="mt-4 inline-block font-bold text-blue-700 underline">受託LPの制作実績サイトを管理 →</Link>
+        </div>
+
+        <div className="mt-6">
           <AdminImageManager placement="top" />
         </div>
       </div>
