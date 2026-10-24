@@ -63,13 +63,13 @@ body, main {
 /* Voice pages share their own audio-themed background, including the footer. */
 body:has([data-voice-site]),
 body:has([data-voice-site]) main {
-  background-image: url("/backgrounds/voice-hologram-background.png");
+  background-image: url("/backgrounds/voice-hologram-background-v2.png");
 }
 
 @media (max-width: 767px) {
   body:has([data-voice-site]),
   body:has([data-voice-site]) main {
-    background-image: url("/backgrounds/voice-hologram-background-mobile.png");
+    background-image: url("/backgrounds/voice-hologram-background-mobile-v2.png");
   }
 }
 
