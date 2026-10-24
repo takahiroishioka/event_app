@@ -8,7 +8,7 @@ import SiteHeader from "@/components/SiteHeader";
 import { ProfileIcon } from "@/components/ProfileEditor";
 import ShareLinkButton from "@/components/ShareLinkButton";
 
-type Line = { id: string; title: string; body: string; category: string | null };
+type Line = { id: string; title: string; body: string; category: string | null; image_url: string | null };
 type Voice = { id: string; user_id: string; line_id: string; audio_url: string; note: string | null; created_at: string; voice_lines: Line | Line[] };
 type Author = { name: string; avatar_path: string | null };
 const pageSize = 12;
@@ -32,7 +32,7 @@ export default function VoiceTimeline() {
     try {
       const supabase = createClient();
       const result = await supabase.from("voice_posts")
-        .select("id, user_id, line_id, audio_url, note, created_at, voice_lines!inner(id, title, body, category)")
+        .select("id, user_id, line_id, audio_url, note, created_at, voice_lines!inner(id, title, body, category, image_url)")
         .eq("voice_lines.status", "published").order("created_at", { ascending: false }).order("id", { ascending: false })
         .range(offset.current, offset.current + pageSize - 1);
       if (result.error) throw result.error;
@@ -94,6 +94,10 @@ export default function VoiceTimeline() {
       const author = authors[voice.user_id];
       return <article key={voice.id} className="rounded-3xl bg-white p-5 shadow-sm sm:p-7">
         <div className="flex items-start justify-between gap-3"><Link href={`/users/${voice.user_id}`} className="flex min-w-0 items-center gap-3"><ProfileIcon small name={author?.name || "投稿者"} path={author?.avatar_path ?? null} /><div className="min-w-0"><p className="break-words text-sm font-bold">{author?.name || "投稿者"}</p><time dateTime={voice.created_at} className="mt-1 block text-xs text-neutral-400">{new Date(voice.created_at).toLocaleString("ja-JP", { timeZone: "Asia/Tokyo", year: "numeric", month: "long", day: "numeric", hour: "2-digit", minute: "2-digit" })}</time></div></Link><ShareLinkButton path={`/lines/voices/${voice.id}`} /></div>
+        {line?.image_url && <Link href={`/lines/voices/${voice.id}`} className="mt-5 block overflow-hidden rounded-xl bg-blue-50" aria-label={`${line.title}の声のページへ`}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={line.image_url} alt={line.title} loading="lazy" decoding="async" className="aspect-video w-full object-contain" />
+        </Link>}
         <Link href={`/lines/${voice.line_id}`} className="mt-5 block text-lg font-bold text-blue-700 hover:underline">{line?.title || "セリフを見る"}</Link>
         {line?.body && <p className="mt-3 line-clamp-3 whitespace-pre-wrap break-words rounded-xl bg-neutral-50 p-4 text-sm leading-7 text-neutral-600">「{line.body}」</p>}
         <audio controls preload="none" src={voice.audio_url} aria-label={`${author?.name || "投稿者"}の投稿音声`} className="mt-4 w-full" />
