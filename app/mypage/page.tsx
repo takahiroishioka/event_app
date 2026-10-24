@@ -27,6 +27,7 @@ type EventData = {
   description: string | null;
   image_url: string | null;
   start_at: string | null;
+  undecided_sort_order: number;
   end_at: string | null;
   location: string | null;
   capacity: number | null;
@@ -187,6 +188,7 @@ export default function MyPage() {
             title,
             description,
             start_at,
+          undecided_sort_order,
             end_at,
             location,
             capacity,
@@ -238,6 +240,7 @@ export default function MyPage() {
           title,
           description,
           start_at,
+          undecided_sort_order,
           end_at,
           location,
           capacity,
@@ -334,6 +337,8 @@ export default function MyPage() {
     loadMyPage();
   }, [router]);
 
+  const scheduledEvents = allEvents.filter((event) => event.start_at);
+  const undecidedEvents = allEvents.filter((event) => !event.start_at).sort((a, b) => a.undecided_sort_order - b.undecided_sort_order || a.title.localeCompare(b.title, "ja"));
   const nearestTask = assignedTasks.find((task) => !task.completed_at) ?? null;
   const selectedPastMonth = pastMonth || pastEvents.map((event) => eventMonth(event.start_at)).sort().at(-1) || eventMonth(new Date().toISOString());
   const monthlyPastEvents = pastEvents.filter((event) => eventMonth(event.start_at) === selectedPastMonth);
@@ -474,19 +479,19 @@ export default function MyPage() {
             </div>
 
             <span className="text-sm text-neutral-500">
-              {allEvents.length}件
+              {scheduledEvents.length}件
             </span>
           </div>
 
-          {allEvents.length === 0 ? (
+          {scheduledEvents.length === 0 ? (
             <div className="rounded-3xl bg-white px-6 py-12 text-center shadow-sm">
               <p className="font-medium text-neutral-700">
-                現在公開中のイベントはありません
+                開催日が決まっているイベントはありません
               </p>
             </div>
           ) : (
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-              {allEvents.map((event) => (
+              {scheduledEvents.map((event) => (
                 <EventCard
                   key={event.id}
                   event={event}
@@ -495,6 +500,8 @@ export default function MyPage() {
             </div>
           )}
         </section>
+
+        {undecidedEvents.length > 0 && <section className="mb-10"><p className="text-sm font-bold text-blue-600">開催未定</p><h2 className="mb-5 mt-2 text-2xl font-bold text-neutral-900">ご希望に合わせて開催します</h2><div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">{undecidedEvents.map((event) => <EventCard key={event.id} event={event} />)}</div></section>}
 
         {pastEvents.length > 0 && (
           <section className="mb-10">

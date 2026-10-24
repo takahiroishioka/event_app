@@ -31,6 +31,7 @@ type EventData = {
   title: string;
   description: string | null;
   start_at: string | null;
+  undecided_sort_order: number;
   end_at: string | null;
   location: string | null;
   capacity: number | null;
@@ -102,6 +103,7 @@ export default function AdminEventDetailPage() {
   const [description, setDescription] =
     useState("");
   const [dateUndecided, setDateUndecided] = useState(false);
+  const [displayOrder, setDisplayOrder] = useState(0);
   const [startAt, setStartAt] =
     useState("");
   const [endAt, setEndAt] =
@@ -190,6 +192,7 @@ export default function AdminEventDetailPage() {
         title,
         description,
         start_at,
+        undecided_sort_order,
         end_at,
         location,
         capacity,
@@ -230,6 +233,7 @@ export default function AdminEventDetailPage() {
 
     setEvent(typedEvent);
     setDateUndecided(!typedEvent.start_at);
+    setDisplayOrder(typedEvent.undecided_sort_order ?? 0);
 
     setTitle(typedEvent.title);
     setDescription(
@@ -755,6 +759,7 @@ function sanitizeFileName(
           description.trim() ||
           null,
 
+        undecided_sort_order: displayOrder,
         start_at: !dateUndecided && startAt
           ? new Date(
               startAt
@@ -786,6 +791,7 @@ function sanitizeFileName(
         title,
         description,
         start_at,
+        undecided_sort_order,
         end_at,
         location,
         capacity,
@@ -1037,7 +1043,7 @@ function sanitizeFileName(
                 />
               </FormField>
 
-              <EventScheduleFields undecided={dateUndecided} onUndecidedChange={setDateUndecided} startAt={startAt} endAt={endAt} onStartChange={setStartAt} onEndChange={setEndAt} disabled={saving} />
+              <EventScheduleFields displayOrder={displayOrder} onDisplayOrderChange={setDisplayOrder} undecided={dateUndecided} onUndecidedChange={setDateUndecided} startAt={startAt} endAt={endAt} onStartChange={setStartAt} onEndChange={setEndAt} disabled={saving} />
 
               <FormField label="会場">
                 <input

@@ -15,6 +15,7 @@ type EventRow = {
   title: string;
   description: string | null;
   start_at: string | null;
+  undecided_sort_order: number;
   location: string | null;
   fee: number;
   image_url: string | null;
@@ -57,7 +58,8 @@ export default function Home() {
   );
   const visibleEvents = selectedMonth
     ? events.filter((event) => event.start_at && toMonthKey(event.start_at) === selectedMonth)
-    : events;
+    : events.filter((event) => event.start_at);
+  const undecidedEvents = events.filter((event) => !event.start_at).sort((a, b) => a.undecided_sort_order - b.undecided_sort_order || a.title.localeCompare(b.title, "ja"));
 
   useEffect(() => {
     let active = true;
@@ -74,7 +76,7 @@ export default function Home() {
       const [eventResult, imageResult, settingsResult, bannerResult, footerResult] = await Promise.all([
         supabase
           .from("events")
-          .select("id, title, description, start_at, location, fee, is_ubm")
+          .select("id, title, description, start_at, undecided_sort_order, location, fee, is_ubm")
           .eq("status", "published")
           .order("start_at", { ascending: true, nullsFirst: false }),
         supabase
@@ -225,13 +227,18 @@ export default function Home() {
 
         {!loading && !errorMessage && events.length > 0 && visibleEvents.length === 0 && (
           <div className="rounded-3xl bg-white p-10 text-center shadow-sm">
-            <p className="font-bold text-neutral-800">選択した月に開催予定のイベントはありません。</p>
+            <p className="font-bold text-neutral-800">{selectedMonth ? "選択した月に開催予定のイベントはありません。" : "開催日が決まっているイベントはありません。"}</p>
           </div>
         )}
 
-        {!loading && !errorMessage && visibleEvents.length > 0 && (
+        {!loading && !errorMessage && [
+          { key: "scheduled", items: visibleEvents },
+          { key: "undecided", items: undecidedEvents },
+        ].filter((group) => group.items.length > 0).map((group) => (
+          <div key={group.key}>
+          {group.key === "undecided" && <div className="mb-7 mt-12"><p className="text-sm font-bold text-blue-600">開催未定</p><h2 className="mt-2 text-3xl font-black text-neutral-900">ご希望に合わせて開催します</h2></div>}
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-            {visibleEvents.map((event) => (
+            {group.items.map((event) => (
               <Link key={event.id} href={`/events/${event.id}`} className="flex h-full flex-col overflow-hidden rounded-2xl bg-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
                   <div className="aspect-video w-full shrink-0 overflow-hidden bg-neutral-200">
                     {event.image_url ? (
@@ -267,7 +274,8 @@ export default function Home() {
               </Link>
             ))}
           </div>
-        )}
+          </div>
+        ))}
       </section>
       <SocialFooter settings={footerSettings} />
       <BannerSection banners={banners} />

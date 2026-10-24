@@ -54,6 +54,7 @@ export default function NewEventPage() {
   const [description, setDescription] = useState("");
 
   const [dateUndecided, setDateUndecided] = useState(false);
+  const [displayOrder, setDisplayOrder] = useState(0);
   const [startAt, setStartAt] = useState("");
   const [endAt, setEndAt] = useState("");
 
@@ -416,7 +417,8 @@ export default function NewEventPage() {
           description:
             trimmedDescription || null,
 
-          start_at: !dateUndecided && startAt
+          undecided_sort_order: displayOrder,
+        start_at: !dateUndecided && startAt
             ? new Date(
                 startAt
               ).toISOString()
@@ -661,7 +663,7 @@ export default function NewEventPage() {
                 />
               </FormField>
 
-              <EventScheduleFields undecided={dateUndecided} onUndecidedChange={setDateUndecided} startAt={startAt} endAt={endAt} onStartChange={setStartAt} onEndChange={setEndAt} disabled={saving} />
+              <EventScheduleFields displayOrder={displayOrder} onDisplayOrderChange={setDisplayOrder} undecided={dateUndecided} onUndecidedChange={setDateUndecided} startAt={startAt} endAt={endAt} onStartChange={setStartAt} onEndChange={setEndAt} disabled={saving} />
 
               <FormField label="会場">
                 <input
