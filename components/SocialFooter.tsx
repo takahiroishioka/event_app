@@ -15,7 +15,7 @@ export default function SocialFooter({ settings }: { settings: SocialFooterSetti
   ].filter((link) => Boolean(link.href));
 
   return (
-    <footer className="border-y border-neutral-200 bg-white/70 px-4 py-10 sm:px-6">
+    <footer className="border-y border-neutral-200 bg-transparent px-4 py-10 sm:px-6">
       <div className="mx-auto flex max-w-6xl flex-col items-center justify-center gap-5 text-center">
         <p className="text-xl font-black tracking-wider text-neutral-900">{settings.brand_name}</p>
         <nav aria-label="サイト一覧" className="flex flex-wrap justify-center gap-6 text-sm font-bold text-neutral-600"><Link href="/" className="hover:text-blue-700">イベントアプリ</Link><Link href="/lines" className="hover:text-blue-700">こえらぼ</Link></nav>

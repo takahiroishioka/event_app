@@ -54,8 +54,19 @@ body, main {
   background-attachment: fixed;
 }
 
+@media (max-width: 767px) {
+  body, main {
+    background-image: url("/backgrounds/data-hologram-background-mobile.png");
+  }
+}
+
 /* Apply the same translucent white surface across pages, without fading content.
-   Native controls keep an opaque background for legibility. */
-.bg-white:not(main):not(input):not(textarea):not(select):not(option):not(button) {
+   Native controls and navigation menus stay opaque for legibility. */
+.bg-white:not(main):not(input):not(textarea):not(select):not(option):not(button):not(nav) {
   background-color: rgb(255 255 255 / 70%);
+}
+
+/* Keep card content readable while allowing a little background to show. */
+.bg-white[class*="rounded-"]:not(main):not(input):not(textarea):not(select):not(option):not(button):not(nav) {
+  background-color: rgb(255 255 255 / 90%);
 }

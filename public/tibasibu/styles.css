@@ -22,3 +22,6 @@ dialog{overflow:hidden}
 
 /* Match the shared site background in this standalone page. */
 body, main { background-color: #f8fbff; background-image: url("/backgrounds/data-hologram-background.png"); background-size: cover; background-position: center; background-repeat: no-repeat; background-attachment: fixed; }
+@media (max-width: 767px) {
+  body, main { background-image: url("/backgrounds/data-hologram-background-mobile.png"); }
+}
