@@ -60,6 +60,19 @@ body, main {
   }
 }
 
+/* Voice pages share their own audio-themed background, including the footer. */
+body:has([data-voice-site]),
+body:has([data-voice-site]) main {
+  background-image: url("/backgrounds/voice-hologram-background.png");
+}
+
+@media (max-width: 767px) {
+  body:has([data-voice-site]),
+  body:has([data-voice-site]) main {
+    background-image: url("/backgrounds/voice-hologram-background-mobile.png");
+  }
+}
+
 /* Apply the same translucent white surface across pages, without fading content.
    Native controls and navigation menus stay opaque for legibility. */
 .bg-white:not(main):not(input):not(textarea):not(select):not(option):not(button):not(nav) {
