@@ -49,6 +49,7 @@ export async function proxy(request: NextRequest) {
     /^\/events\/[^/]+\/?$/.test(pathname);
 
   const isPublicPage =
+    pathname === "/api/guest-reservations" ||
     pathname === "/" ||
     pathname === "/event-app-service" || pathname === "/event-app-service/" ||
     pathname === "/event-app-service/opengraph-image" ||

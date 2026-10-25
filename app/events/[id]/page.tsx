@@ -6,6 +6,7 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 import {
@@ -147,6 +148,11 @@ export default function EventDetailPage() {
 
   const [questionsReady, setQuestionsReady] = useState(false);
   const [guestApplicationOpen, setGuestApplicationOpen] = useState(false);
+  const [guestEmail, setGuestEmail] = useState("");
+  const [guestReceipt, setGuestReceipt] = useState<string | null>(null);
+  const [guestMailFailed, setGuestMailFailed] = useState(false);
+  const guestRequest = useRef<string | null>(null);
+  const guestSubmitting = useRef(false);
   const [applicationChoiceOpen, setApplicationChoiceOpen] = useState(true);
 
 
@@ -686,26 +692,44 @@ export default function EventDetailPage() {
   }
 
   async function handleGuestJoin() {
-    if (!event || !event.start_at) return;
+    if (!event || !event.start_at || guestSubmitting.current) return;
     const nameQuestion = questions.find((question) => question.application_field === "name");
     const nameAnswer = nameQuestion ? answers[nameQuestion.id] : "";
     const normalizedName = typeof nameAnswer === "string" ? nameAnswer.trim() : "";
     setMessage("");
     setIsError(false);
     if (!normalizedName) { setIsError(true); setMessage("お名前を入力してください。"); return; }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(guestEmail.trim()) || guestEmail.trim().length > 254) { setIsError(true); setMessage("確認メールの送信先メールアドレスを入力してください。"); return; }
     if (!hasCompletedRequiredQuestions) { setIsError(true); setMessage("必須の質問に回答してください。"); return; }
     if (plans.length > 0 && !selectedPlanId) { setIsError(true); setMessage("プランを選択してください。"); return; }
     setProcessing(true);
+    guestSubmitting.current = true;
     const answerPayload = questions.reduce<Record<string, string | string[]>>((current, question) => {
       const answer = answers[question.id];
       if (typeof answer === "string" && answer.trim()) current[question.id] = answer.trim();
       if (Array.isArray(answer) && answer.length > 0) current[question.id] = answer;
       return current;
     }, {});
-    const { error } = await supabase.rpc("submit_guest_event_application", { p_event_id: event.id, p_guest_name: normalizedName, p_answers: answerPayload, p_plan_id: selectedPlanId || null });
-    if (error) { setIsError(true); setMessage(`ゲスト申込みに失敗しました：${error.message}`); }
-    else { setGuestApplicationOpen(false); setMessage("ゲストとして参加申込みを受け付けました。"); }
-    setProcessing(false);
+    // Keep the same request after an uncertain network result or mail failure.
+    guestRequest.current ??= JSON.stringify({ eventId: event.id, name: normalizedName, email: guestEmail.trim(), answers: answerPayload, planId: selectedPlanId || null, requestId: crypto.randomUUID() });
+    try {
+      const response = await fetch("/api/guest-reservations", { method: "POST", headers: { "Content-Type": "application/json" }, body: guestRequest.current });
+      const result = await response.json();
+      if (!response.ok) {
+        if (response.status < 500) guestRequest.current = null;
+        throw new Error(result.error || "受付状況を確認できませんでした。同じ内容で再度お試しください。");
+      }
+      setGuestReceipt(result.registrationId);
+      setGuestMailFailed(result.mailStatus !== "sent");
+      setGuestApplicationOpen(false);
+      setMessage(`${result.reservationStatus === "waiting" ? "キャンセル待ちを受け付けました。" : "参加申込みを受け付けました。"}${result.mailStatus === "sent" ? "確認メールを送信しました。" : "確認メールを送信できませんでした。予約は受け付け済みです。下のボタンからメール送信を再試行できます。"}`);
+    } catch (error) {
+      setIsError(true);
+      setMessage(error instanceof Error ? error.message : "通信に失敗しました。同じ内容で再度お試しください。");
+    } finally {
+      guestSubmitting.current = false;
+      setProcessing(false);
+    }
   }
   async function handleJoin() {
     if (!event || !event.start_at) {
@@ -1251,7 +1275,7 @@ export default function EventDetailPage() {
         )}
 
         {event.status === "published" && isDateUndecided && <EventInterestCallout lineUrl={lineUrl} title={event.title} />}
-        {canJoin && !isDateUndecided && (
+        {canJoin && !isDateUndecided && !guestReceipt && (
           <div id="application" className="mt-6 scroll-mt-24">
             {!isLoggedIn && !guestApplicationOpen && !applicationChoiceOpen && (
               <button type="button" onClick={() => setApplicationChoiceOpen(true)} className="w-full rounded-xl bg-blue-600 px-5 py-4 font-bold text-white hover:bg-blue-700">参加方法を選択</button>
@@ -1282,6 +1306,13 @@ export default function EventDetailPage() {
                         </label>
                       ))}
                     </div>
+                  </section>
+                )}
+                {guestApplicationOpen && !isLoggedIn && (
+                  <section className="mb-5 rounded-3xl bg-white p-6 shadow-sm sm:p-8">
+                    <label htmlFor="guest-email" className="font-bold">確認メールの送信先（必須）</label>
+                    <input id="guest-email" type="email" autoComplete="email" required maxLength={254} value={guestEmail} onChange={(e) => setGuestEmail(e.target.value)} disabled={processing} className="mt-3 w-full rounded-xl border border-neutral-300 p-3" />
+                    <p className="mt-2 text-sm text-neutral-500">予約内容をメールでお送りします。</p>
                   </section>
                 )}
                 {questionsReady ? (
@@ -1351,6 +1382,8 @@ export default function EventDetailPage() {
           </div>
         )}
 
+        {guestReceipt && <p className="mt-5 text-sm">受付番号：{guestReceipt}</p>}
+        {guestMailFailed && <button type="button" onClick={handleGuestJoin} disabled={processing} className="mt-4 rounded-xl bg-blue-600 px-5 py-3 font-bold text-white disabled:opacity-50">{processing ? "送信中…" : "確認メールの送信を再試行"}</button>}
         {message && (
           <p
             className={`mt-6 rounded-2xl px-5 py-4 text-sm ${
