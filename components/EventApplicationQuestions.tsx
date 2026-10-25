@@ -33,6 +33,7 @@ type Props = {
   questions: EventQuestion[];
   answers: EventAnswers;
   disabled?: boolean;
+  guestMode?: boolean;
   onChange: (
     questionId: string,
     value: string | string[]
@@ -43,6 +44,7 @@ export default function EventApplicationQuestions({
   questions,
   answers,
   disabled = false,
+  guestMode = false,
   onChange,
 }: Props) {
   if (questions.length === 0) {
@@ -73,6 +75,7 @@ export default function EventApplicationQuestions({
             questionNumber={index + 1}
             value={answers[question.id]}
             disabled={disabled}
+            emailContact={guestMode && question.application_field === "sns"}
             onChange={(value) =>
               onChange(question.id, value)
             }
@@ -88,12 +91,14 @@ function QuestionField({
   questionNumber,
   value,
   disabled,
+  emailContact,
   onChange,
 }: {
   question: EventQuestion;
   questionNumber: number;
   value: string | string[] | undefined;
   disabled: boolean;
+  emailContact: boolean;
   onChange: (
     value: string | string[]
   ) => void;
@@ -101,6 +106,7 @@ function QuestionField({
   const sortedOptions = [...question.options].sort(
     (a, b) => a.sort_order - b.sort_order
   );
+  const label = emailContact ? "メールアドレス（予約確認・ご連絡用）" : getApplicationQuestionLabel(question);
 
   return (
     <fieldset disabled={disabled}>
@@ -109,9 +115,9 @@ function QuestionField({
           {questionNumber}.
         </span>
 
-        {getApplicationQuestionLabel(question)}
+        {label}
 
-        {question.is_required && (
+        {(question.is_required || emailContact) && (
           <span className="ml-2 rounded bg-red-50 px-2 py-0.5 text-xs font-bold text-red-600">
             必須
           </span>
@@ -119,12 +125,13 @@ function QuestionField({
       </legend>
 
       <div className="mt-3">
-        {question.question_type === "text" && (
+        {(question.question_type === "text" || emailContact) && (
           <input
-            type="text"
-            required={question.is_required}
-            maxLength={question.application_field === "name" ? 100 : undefined}
-            aria-label={getApplicationQuestionLabel(question)}
+            type={emailContact ? "email" : "text"}
+            autoComplete={emailContact ? "email" : undefined}
+            required={question.is_required || emailContact}
+            maxLength={emailContact ? 254 : question.application_field === "name" ? 100 : undefined}
+            aria-label={label}
             value={
               typeof value === "string"
                 ? value
@@ -138,7 +145,8 @@ function QuestionField({
           />
         )}
 
-        {question.question_type ===
+        {emailContact && <p className="mt-2 text-sm text-neutral-500">予約確認メールをお送りします。受信できるメールアドレスを入力してください。</p>}
+        {!emailContact && question.question_type ===
           "textarea" && (
           <textarea
             value={
@@ -155,7 +163,7 @@ function QuestionField({
           />
         )}
 
-        {question.question_type ===
+        {!emailContact && question.question_type ===
           "single_choice" && (
           <div className="space-y-3">
             {sortedOptions.map((option) => {
@@ -193,7 +201,7 @@ function QuestionField({
           </div>
         )}
 
-        {question.question_type ===
+        {!emailContact && question.question_type ===
           "multiple_choice" && (
           <div className="space-y-3">
             {sortedOptions.map((option) => {

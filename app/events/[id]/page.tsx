@@ -148,7 +148,6 @@ export default function EventDetailPage() {
 
   const [questionsReady, setQuestionsReady] = useState(false);
   const [guestApplicationOpen, setGuestApplicationOpen] = useState(false);
-  const [guestEmail, setGuestEmail] = useState("");
   const [guestReceipt, setGuestReceipt] = useState<string | null>(null);
   const [guestMailFailed, setGuestMailFailed] = useState(false);
   const guestRequest = useRef<string | null>(null);
@@ -696,6 +695,9 @@ export default function EventDetailPage() {
     const nameQuestion = questions.find((question) => question.application_field === "name");
     const nameAnswer = nameQuestion ? answers[nameQuestion.id] : "";
     const normalizedName = typeof nameAnswer === "string" ? nameAnswer.trim() : "";
+    const contactQuestion = questions.find((question) => question.application_field === "sns");
+    const contactAnswer = contactQuestion ? answers[contactQuestion.id] : "";
+    const guestEmail = typeof contactAnswer === "string" ? contactAnswer.trim() : "";
     setMessage("");
     setIsError(false);
     if (!normalizedName) { setIsError(true); setMessage("お名前を入力してください。"); return; }
@@ -1308,15 +1310,8 @@ export default function EventDetailPage() {
                     </div>
                   </section>
                 )}
-                {guestApplicationOpen && !isLoggedIn && (
-                  <section className="mb-5 rounded-3xl bg-white p-6 shadow-sm sm:p-8">
-                    <label htmlFor="guest-email" className="font-bold">確認メールの送信先（必須）</label>
-                    <input id="guest-email" type="email" autoComplete="email" required maxLength={254} value={guestEmail} onChange={(e) => setGuestEmail(e.target.value)} disabled={processing} className="mt-3 w-full rounded-xl border border-neutral-300 p-3" />
-                    <p className="mt-2 text-sm text-neutral-500">予約内容をメールでお送りします。</p>
-                  </section>
-                )}
                 {questionsReady ? (
-                  <EventApplicationQuestions questions={questions} answers={answers} disabled={processing} onChange={handleAnswerChange} />
+                  <EventApplicationQuestions questions={questions} answers={answers} disabled={processing} guestMode={guestApplicationOpen && !isLoggedIn} onChange={handleAnswerChange} />
                 ) : (
                   <section role="alert" className="rounded-3xl border border-orange-200 bg-white p-6 text-neutral-900 shadow-sm sm:p-8">
                     <h2 className="text-xl font-bold">申込みフォームを読み込めませんでした</h2>
