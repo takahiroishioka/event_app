@@ -29,7 +29,7 @@ test('APIの送信成功・失敗・再試行・入力拒否', async () => {
   };
   const { POST } = load('app/api/guest-reservations/route.ts', { '@supabase/supabase-js': { createClient: () => db }, '@/lib/guest-confirmation': messages });
   const originalFetch = global.fetch;
-  global.fetch = async (_url, options) => { sends++; assert.equal(options.headers['Idempotency-Key'], 'guest-confirmation/mail'); return { ok: !fail, status: fail ? 500 : 200 }; };
+  global.fetch = async (_url, options) => { sends++; assert.equal(options.headers['Idempotency-Key'], 'guest-confirmation/mail'); return { ok: !fail, status: fail ? 500 : 200, json: async () => ({ name: "validation_error" }) }; };
   const uuid = '11111111-1111-4111-8111-111111111111';
   const request = (email = 'guest@example.com', origin = 'https://example.com') => new Request('https://example.com/api/guest-reservations', { method: 'POST', headers: { origin }, body: JSON.stringify({ eventId: uuid, requestId: uuid, name: '参加者', email, planId: null, answers: {} }) });
   try {

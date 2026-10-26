@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import ReservationCompleteDialog, { type ReservationCompletion } from "@/components/ReservationCompleteDialog";
 import {
   type ReactNode,
   useCallback,
@@ -148,6 +149,7 @@ export default function EventDetailPage() {
 
   const [questionsReady, setQuestionsReady] = useState(false);
   const [guestApplicationOpen, setGuestApplicationOpen] = useState(false);
+  const [completion, setCompletion] = useState<ReservationCompletion | null>(null);
   const [guestReceipt, setGuestReceipt] = useState<string | null>(null);
   const [guestMailFailed, setGuestMailFailed] = useState(false);
   const guestRequest = useRef<string | null>(null);
@@ -724,6 +726,7 @@ export default function EventDetailPage() {
       setGuestReceipt(result.registrationId);
       setGuestMailFailed(result.mailStatus !== "sent");
       setGuestApplicationOpen(false);
+      setCompletion({ guest: true, waiting: result.reservationStatus === "waiting", mailSent: result.mailStatus === "sent" });
       setMessage(`${result.reservationStatus === "waiting" ? "キャンセル待ちを受け付けました。" : "参加申込みを受け付けました。"}${result.mailStatus === "sent" ? "確認メールを送信しました。" : "確認メールを送信できませんでした。予約は受け付け済みです。下のボタンからメール送信を再試行できます。"}`);
     } catch (error) {
       setIsError(true);
@@ -913,6 +916,7 @@ export default function EventDetailPage() {
       setUserEvent(
         savedRegistration
       );
+      setCompletion({ guest: false, waiting: savedRegistration.status === "waiting" });
 
       if (
         nextStatus === "waiting"
@@ -1377,7 +1381,7 @@ export default function EventDetailPage() {
           </div>
         )}
 
-        {guestReceipt && <p className="mt-5 text-sm">受付番号：{guestReceipt}</p>}
+        {guestReceipt && <p className="mt-5 rounded-xl bg-white/90 px-4 py-3 text-sm text-neutral-900">受付番号：{guestReceipt}</p>}
         {guestMailFailed && <button type="button" onClick={handleGuestJoin} disabled={processing} className="mt-4 rounded-xl bg-blue-600 px-5 py-3 font-bold text-white disabled:opacity-50">{processing ? "送信中…" : "確認メールの送信を再試行"}</button>}
         {message && (
           <p
@@ -1416,6 +1420,7 @@ export default function EventDetailPage() {
         )}
       </div>
     </main>
+    <ReservationCompleteDialog completion={completion} onClose={() => setCompletion(null)} />
     </>
   );
 }

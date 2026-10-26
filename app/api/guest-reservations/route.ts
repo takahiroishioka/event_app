@@ -54,11 +54,18 @@ export async function POST(request: Request) {
       method: "POST", headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json", "Idempotency-Key": `guest-confirmation/${result.mailId}` },
       body: JSON.stringify({ from, to: [result.payload.email], ...message }), signal: AbortSignal.timeout(10000),
     });
-    if (!sent.ok) throw new Error(`Mail provider returned ${sent.status}`);
+    if (!sent.ok) {
+      const details = await sent.json().catch(() => null);
+      // Log only the provider's machine-readable category, never email content or addresses.
+      const category = typeof details?.name === "string" && /^[a-z_]{1,80}$/.test(details.name) ? details.name : "unknown";
+      console.error("Guest confirmation provider rejected", { status: sent.status, category, mailId: result.mailId });
+      throw new Error("Mail provider rejected request");
+    }
     const { error: updateError } = await supabase.from("guest_confirmation_emails").update({ status: "sent", sent_at: new Date().toISOString() }).eq("id", result.mailId);
     if (updateError) console.error("Confirmation delivery status update failed", updateError.code);
     return response("sent");
-  } catch {
+  } catch (error) {
+    console.error("Guest confirmation send failed", { mailId: result.mailId, kind: error instanceof Error ? error.name : "UnknownError" });
     await supabase.from("guest_confirmation_emails").update({ status: "failed" }).eq("id", result.mailId).neq("status", "sent");
     return response("failed");
   }
