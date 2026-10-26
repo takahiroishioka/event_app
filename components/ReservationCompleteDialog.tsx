@@ -27,13 +27,14 @@ export default function ReservationCompleteDialog({ completion, onClose }: {
   }, [completion]);
 
   return (
-    <dialog ref={dialog} onClose={onClose} aria-labelledby="reservation-complete-title" className="fixed inset-0 m-auto max-h-[90dvh] w-[calc(100%-2rem)] max-w-lg overflow-y-auto rounded-3xl bg-white p-6 text-neutral-900 shadow-xl backdrop:bg-black/40 sm:p-8">
+    <dialog ref={dialog} onClose={onClose} aria-labelledby="reservation-complete-title" className="fixed inset-0 m-auto max-h-[90dvh] w-[calc(100%-2rem)] max-w-lg overflow-y-auto rounded-3xl bg-[#fff] p-6 text-center text-neutral-900 shadow-xl backdrop:bg-black/50 sm:p-8">
       {completion && <>
-        <p className="text-sm font-bold text-blue-600">お申し込み受付完了</p>
-        <h2 id="reservation-complete-title" className="mt-3 text-2xl font-bold">お申し込みありがとうございました</h2>
+        <div aria-hidden="true" className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-blue-50 text-3xl font-bold text-blue-600">✓</div>
+        <h2 id="reservation-complete-title" className="mt-5 text-2xl font-bold leading-relaxed">お申し込み<br />ありがとうございました</h2>
+        {completion.guest && completion.mailSent && <p className="mt-4 text-lg font-bold text-blue-700">確認メールを送信いたしました</p>}
         <p className="mt-4 text-sm leading-7">{completion.waiting ? "キャンセル待ちとして受け付けました。現時点では参加確定ではありません。" : "イベントへの参加申込みを受け付けました。"}</p>
         {completion.guest ? <>
-          <p className="mt-4 text-sm leading-7">{completion.mailSent ? "入力いただいたメールアドレスに確認メールを送りました。申込内容はメールでご確認ください。" : "確認メールを送信できませんでしたが、お申し込みは受け付け済みです。この画面を閉じて、メール送信の再試行ボタンをご利用ください。"}</p>
+          <p className="mt-4 text-sm leading-7">{completion.mailSent ? "申込内容は、入力いただいたメールアドレスに届く確認メールでご確認ください。" : "確認メールを送信できませんでしたが、お申し込みは受け付け済みです。この画面を閉じて、メール送信の再試行ボタンをご利用ください。"}</p>
           <div className="mt-5 rounded-2xl bg-blue-50 p-4 text-sm leading-7">
             次回からログインしてお申し込みいただくと、マイページで申込内容を確認できます。
             <p className="mt-2 text-xs text-neutral-600">今回のゲスト申込みは、後からログインしてもマイページには表示されません。</p>
